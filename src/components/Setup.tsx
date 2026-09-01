@@ -40,8 +40,13 @@ export function Setup({ settings, onChanged, notify }: {
   async function run(action: string, body: Record<string, unknown>, msg: string) {
     setBusy(action);
     try {
-      await api("/api/setup", { method: "POST", body: JSON.stringify({ action, ...body }) });
-      notify(msg);
+      const r = await api<{ envPersisted?: boolean; envVar?: string }>("/api/setup", {
+        method: "POST",
+        body: JSON.stringify({ action, ...body }),
+      });
+      if (r.envPersisted === false && r.envVar) {
+        notify(`${msg}. Set ${r.envVar} in your host's env vars so it survives a redeploy.`);
+      } else notify(msg);
       setInfo(await api<SetupInfo>("/api/setup"));
       onChanged();
     } catch (err) {

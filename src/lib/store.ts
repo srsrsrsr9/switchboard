@@ -2,7 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import type { Store, Settings } from "./types";
 
-const DATA_DIR = path.join(process.cwd(), "data");
+// DATA_DIR lets a deployment point this at a mounted volume that survives restarts.
+const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
 const FILE = path.join(DATA_DIR, "store.json");
 
 const DEFAULT_SETTINGS: Settings = {

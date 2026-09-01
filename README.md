@@ -89,4 +89,40 @@ src/app/api/     state, contacts, campaign, settings, setup, voices
 src/components/  Console, Roster, Lines, Appointments, Setup, ImportDrawer
 ```
 
-State lives in `data/store.json` — delete it to start clean.
+State lives in `data/store.json` — delete it to start clean. Set `DATA_DIR` to move it
+somewhere else, which is how the deployed build points it at a mounted volume.
+
+## Deploying
+
+This app is a **persistent process**: it holds the roster in memory and runs a dialer loop
+on a 2.5-second tick. That rules out serverless hosts — on Vercel the filesystem store
+would evaporate, the loop would never advance past the first tick because functions freeze
+after responding, and Hobby cron (once per day) can't stand in for it. Deploy it somewhere
+that runs a container continuously: Render, Railway, Fly, or any small VM.
+
+A `Dockerfile` and a Render blueprint (`render.yaml`) are included.
+
+### Render
+
+1. **New → Blueprint**, point it at this repo. `render.yaml` provisions a Docker web
+   service with a 1 GB disk mounted at `/data`.
+2. Set the environment variables it asks for. `APP_PASSWORD` is required — see below.
+   `ELEVENLABS_API_KEY`, `TWILIO_ACCOUNT_SID`, and `TWILIO_PHONE_NUMBER` come from your
+   local `.env.local`; `ELEVENLABS_AGENT_ID` and `ELEVENLABS_PHONE_NUMBER_ID` are filled in
+   once the Setup tab has provisioned them.
+3. Leave `DRY_RUN=1` until you have signed in and checked the console over the deployed URL.
+
+The disk needs a paid instance type (Starter). Without it the store resets on every
+restart and redeploy, which loses the roster mid-campaign.
+
+### Authentication
+
+The console can start phone calls billed to your ElevenLabs and Twilio accounts, so it
+refuses to run open to the internet. Set `APP_PASSWORD` and it serves a sign-in page,
+setting a 12-hour HMAC-signed HttpOnly cookie; every page and every API route is behind
+it, and login attempts are throttled after five failures. Set nothing and it will serve on
+localhost only — any other Host header gets a 503 explaining why. `AUTH_SECRET` is
+optional and defaults to the password.
+
+This is single-shared-password auth, which suits one operator. It is not a user system —
+there are no accounts, roles, or audit trail of who started a campaign.

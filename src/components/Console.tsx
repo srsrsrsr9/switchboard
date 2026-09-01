@@ -98,9 +98,22 @@ export function Console() {
           </div>
         </div>
 
-        <span className={settings.dryRun ? "mode mode--sim" : "mode mode--live"}>
-          {settings.dryRun ? "Simulation" : "Live dialing"}
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
+          <span className={settings.dryRun ? "mode mode--sim" : "mode mode--live"}>
+            {settings.dryRun ? "Simulation" : "Live dialing"}
+          </span>
+          {state.signedIn && (
+            <button
+              className="btn btn--ghost btn--sm"
+              onClick={async () => {
+                await fetch("/api/login", { method: "DELETE" });
+                window.location.href = "/login";
+              }}
+            >
+              Sign out
+            </button>
+          )}
+        </div>
       </header>
 
       {campaign.lastError && (

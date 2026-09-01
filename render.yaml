@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: switchboard
+    runtime: docker
+    plan: starter          # a persistent disk requires a paid instance
+    healthCheckPath: /login
+    disk:
+      name: switchboard-data
+      mountPath: /data     # matches DATA_DIR in the Dockerfile
+      sizeGB: 1
+    envVars:
+      - key: APP_PASSWORD          # set this in the dashboard; the app refuses to serve without it
+        sync: false
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_PHONE_NUMBER
+        sync: false
+      - key: ELEVENLABS_AGENT_ID
+        sync: false
+      - key: ELEVENLABS_PHONE_NUMBER_ID
+        sync: false
+      - key: DRY_RUN
+        value: "1"

@@ -38,8 +38,8 @@ export async function POST(req: Request) {
       const agentId = await el.createAgent(s.settings, voiceId);
       s.settings.agentId = agentId;
       persist();
-      writeEnv({ ELEVENLABS_AGENT_ID: agentId });
-      return ok({ agentId, created: true });
+      const envPersisted = writeEnv({ ELEVENLABS_AGENT_ID: agentId });
+      return ok({ agentId, created: true, envPersisted, envVar: "ELEVENLABS_AGENT_ID" });
     }
 
     if (body.action === "phone") {
@@ -57,8 +57,8 @@ export async function POST(req: Request) {
         s.settings.phoneNumberId = already.phone_number_id;
         s.settings.fromNumber = number;
         persist();
-        writeEnv({ ELEVENLABS_PHONE_NUMBER_ID: already.phone_number_id });
-        return ok({ phoneNumberId: already.phone_number_id, reused: true });
+        const envPersisted = writeEnv({ ELEVENLABS_PHONE_NUMBER_ID: already.phone_number_id });
+        return ok({ phoneNumberId: already.phone_number_id, reused: true, envPersisted, envVar: "ELEVENLABS_PHONE_NUMBER_ID" });
       }
 
       const phoneNumberId = await el.importTwilioNumber({
@@ -70,8 +70,8 @@ export async function POST(req: Request) {
       s.settings.phoneNumberId = phoneNumberId;
       s.settings.fromNumber = number;
       persist();
-      writeEnv({ ELEVENLABS_PHONE_NUMBER_ID: phoneNumberId });
-      return ok({ phoneNumberId, created: true });
+      const envPersisted = writeEnv({ ELEVENLABS_PHONE_NUMBER_ID: phoneNumberId });
+      return ok({ phoneNumberId, created: true, envPersisted, envVar: "ELEVENLABS_PHONE_NUMBER_ID" });
     }
 
     return bad("Unknown setup action.");

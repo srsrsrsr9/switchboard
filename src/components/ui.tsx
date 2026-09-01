@@ -9,6 +9,7 @@ export type StatePayload = {
   settings: import("@/lib/types").Settings;
   campaign: import("@/lib/types").CampaignState;
   counts: Record<string, number>;
+  signedIn: boolean;
   configured: { apiKey: boolean; agent: boolean; phone: boolean };
 };
 

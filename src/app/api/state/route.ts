@@ -2,10 +2,11 @@ import { getStore } from "@/lib/store";
 import { canCallNow, contactLocalTime } from "@/lib/compliance";
 import { resumeIfRunning } from "@/lib/dialer";
 import { ok } from "@/lib/api";
+import { authMode } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
   resumeIfRunning();
   const s = getStore();
   const now = new Date();
@@ -24,6 +25,7 @@ export async function GET() {
     settings: s.settings,
     campaign: s.campaign,
     counts,
+    signedIn: authMode(new URL(req.url).host) === "password",
     configured: {
       apiKey: Boolean(process.env.ELEVENLABS_API_KEY),
       agent: Boolean(s.settings.agentId),

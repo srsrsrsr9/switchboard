@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 export default {
   reactStrictMode: false,
+  // Emits a self-contained server bundle so the Docker image stays small.
+  output: "standalone",
   // Two lockfiles exist above this directory; pin the root so tracing is correct.
   outputFileTracingRoot: import.meta.dirname,
   webpack: (config) => {
