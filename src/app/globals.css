@@ -1,0 +1,177 @@
+/* ============================================================
+   Switchboard — warm charcoal panels, amber signal lamps.
+   ============================================================ */
+
+:root {
+  --ink:        oklch(0.158 0.010 62);
+  --panel:      oklch(0.205 0.012 62);
+  --panel-2:    oklch(0.248 0.013 62);
+  --panel-3:    oklch(0.292 0.014 62);
+  --line:       oklch(0.335 0.014 62);
+  --line-soft:  oklch(0.268 0.012 62);
+
+  --text:       oklch(0.940 0.010 78);
+  --text-2:     oklch(0.760 0.014 74);
+  --text-3:     oklch(0.618 0.014 70);
+
+  --lamp:       oklch(0.790 0.148 68);   /* amber — the accent, used sparingly */
+  --lamp-dim:   oklch(0.560 0.100 68);
+  --live:       oklch(0.740 0.130 152);  /* oxidized green — a connected line */
+  --stop:       oklch(0.645 0.175 27);   /* brick red */
+  --cool:       oklch(0.720 0.055 238);  /* slate blue — informational */
+  --violet:     oklch(0.700 0.090 305);
+
+  --space-2xs: 4px;  --space-xs: 8px;  --space-sm: 12px;
+  --space-md: 16px;  --space-lg: 24px; --space-xl: 32px;
+  --space-2xl: 48px; --space-3xl: 64px;
+
+  --radius: 3px;
+  --radius-lg: 5px;
+
+  --display: "Familjen Grotesk", "Trebuchet MS", sans-serif;
+  --body: "Chivo", "Helvetica Neue", sans-serif;
+  --mono: "Martian Mono", ui-monospace, monospace;
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--ink);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: 14px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background-image:
+    radial-gradient(120% 80% at 12% -10%, oklch(0.235 0.020 66) 0%, transparent 62%),
+    radial-gradient(90% 70% at 100% 0%, oklch(0.200 0.016 40) 0%, transparent 55%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+h1, h2, h3, h4 { font-family: var(--display); font-weight: 600; margin: 0; letter-spacing: -0.015em; }
+h1 { font-size: 1.35rem; }
+h2 { font-size: 1.05rem; }
+h3 { font-size: 0.875rem; }
+p { margin: 0; }
+a { color: var(--lamp); }
+
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; opacity: 0.42; }
+
+::selection { background: var(--lamp-dim); color: var(--ink); }
+
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--lamp);
+  outline-offset: 2px;
+}
+
+/* ---------- shared atoms ---------- */
+
+.eyebrow {
+  font-family: var(--display);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.mono { font-family: var(--mono); font-size: 0.78em; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 7px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: background 140ms var(--ease), border-color 140ms var(--ease), transform 90ms var(--ease);
+}
+.btn:hover:not(:disabled) { background: var(--panel-3); border-color: oklch(0.40 0.016 62); }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+
+.btn--ghost { background: transparent; border-color: transparent; color: var(--text-2); padding: 5px 8px; }
+.btn--ghost:hover:not(:disabled) { background: var(--panel-2); color: var(--text); border-color: transparent; }
+
+.btn--go {
+  background: var(--lamp);
+  border-color: oklch(0.85 0.15 68);
+  color: oklch(0.20 0.05 62);
+  font-weight: 600;
+  box-shadow: 0 0 0 1px oklch(0.79 0.148 68 / 0.25), 0 6px 18px -8px oklch(0.79 0.148 68 / 0.7);
+}
+.btn--go:hover:not(:disabled) { background: oklch(0.83 0.152 68); border-color: oklch(0.88 0.15 68); }
+
+.btn--stop { background: transparent; border-color: color-mix(in oklch, var(--stop) 55%, var(--line)); color: oklch(0.80 0.13 27); }
+.btn--stop:hover:not(:disabled) { background: color-mix(in oklch, var(--stop) 16%, transparent); border-color: var(--stop); }
+
+.btn--sm { padding: 4px 9px; font-size: 0.75rem; }
+
+.field {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--ink);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 0.8125rem;
+  transition: border-color 140ms var(--ease);
+}
+.field:focus { border-color: var(--lamp-dim); outline: none; }
+.field::placeholder { color: var(--text-3); }
+textarea.field { resize: vertical; line-height: 1.5; font-family: var(--mono); font-size: 0.75rem; }
+
+.lamp {
+  --lamp-color: var(--text-3);
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--lamp-color);
+  box-shadow: 0 0 0 2.5px color-mix(in oklch, var(--lamp-color) 22%, transparent);
+}
+.lamp--off  { --lamp-color: oklch(0.42 0.010 62); box-shadow: 0 0 0 2.5px transparent; }
+.lamp--wait { --lamp-color: var(--cool); }
+.lamp--live { --lamp-color: var(--lamp); animation: pulse 1.4s var(--ease) infinite; }
+.lamp--good { --lamp-color: var(--live); }
+.lamp--bad  { --lamp-color: var(--stop); }
+.lamp--held { --lamp-color: var(--violet); }
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 2.5px color-mix(in oklch, var(--lamp) 26%, transparent); }
+  50%      { box-shadow: 0 0 0 6px color-mix(in oklch, var(--lamp) 6%, transparent); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+
+.tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 7px 2px 6px;
+  border-radius: 2px;
+  background: var(--panel-2);
+  border: 1px solid var(--line-soft);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.tag--warn { border-color: color-mix(in oklch, var(--stop) 40%, var(--line-soft)); color: oklch(0.80 0.11 27); background: color-mix(in oklch, var(--stop) 10%, transparent); }
+.tag--good { border-color: color-mix(in oklch, var(--live) 35%, var(--line-soft)); color: var(--live); background: color-mix(in oklch, var(--live) 9%, transparent); }
+
+hr.rule { border: 0; border-top: 1px solid var(--line-soft); margin: 0; }
