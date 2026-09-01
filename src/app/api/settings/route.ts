@@ -1,5 +1,6 @@
 import { getStore, persist } from "@/lib/store";
 import { ok, bad, errorMessage } from "@/lib/api";
+import { EPHEMERAL_REASON, storageIsDurable } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,7 @@ export async function PATCH(req: Request) {
     if (s.settings.callWindowEnd <= s.settings.callWindowStart) {
       return bad("The calling window has to end after it starts.");
     }
+    if (patch.dryRun === false && !storageIsDurable()) return bad(EPHEMERAL_REASON, 409);
     for (const key of ["weekendCalling", "requireConsent", "dryRun"] as const) {
       if (typeof patch[key] === "boolean") s.settings[key] = patch[key] as boolean;
     }

@@ -1,5 +1,6 @@
 import { getStore, persist, newId } from "./store";
 import { canCallNow } from "./compliance";
+import { storageIsDurable } from "./storage";
 import * as el from "./elevenlabs";
 import type { Call, Contact, ContactStatus, Store } from "./types";
 
@@ -109,7 +110,9 @@ async function placeCall(s: Store, contact: Contact) {
   contact.lastAttemptAt = Date.now();
   persist();
 
-  if (s.settings.dryRun) { simulate(call, contact); return; }
+  // storageIsDurable is re-checked here rather than trusted from settings: this is
+  // the last point before a real phone rings.
+  if (s.settings.dryRun || !storageIsDurable()) { simulate(call, contact); return; }
 
   try {
     const res = await el.outboundCall({

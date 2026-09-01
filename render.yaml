@@ -2,15 +2,20 @@ services:
   - type: web
     name: switchboard
     runtime: docker
-    plan: starter          # a persistent disk requires a paid instance
+    plan: free
     healthCheckPath: /login
-    disk:
-      name: switchboard-data
-      mountPath: /data     # matches DATA_DIR in the Dockerfile
-      sizeGB: 1
     envVars:
-      - key: APP_PASSWORD          # set this in the dashboard; the app refuses to serve without it
+      # Required. The console refuses to serve without it — see README.
+      - key: APP_PASSWORD
         sync: false
+      # Free instances have no persistent disk, so the do-not-call list and
+      # attempt counters cannot survive a restart or spin-down. This locks the
+      # deployment to simulation; real dialing belongs on durable storage.
+      - key: EPHEMERAL_STORAGE
+        value: "1"
+      - key: DRY_RUN
+        value: "1"
+      # Optional here: only the Setup tab's voice list and provisioning use them.
       - key: ELEVENLABS_API_KEY
         sync: false
       - key: TWILIO_ACCOUNT_SID
@@ -19,7 +24,10 @@ services:
         sync: false
       - key: ELEVENLABS_AGENT_ID
         sync: false
-      - key: ELEVENLABS_PHONE_NUMBER_ID
-        sync: false
-      - key: DRY_RUN
-        value: "1"
+
+# To run real campaigns instead, switch plan to `starter` and add:
+#   disk:
+#     name: switchboard-data
+#     mountPath: /data
+#     sizeGB: 1
+# then set EPHEMERAL_STORAGE to "0". The Dockerfile already points DATA_DIR at /data.

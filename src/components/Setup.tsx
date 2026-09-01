@@ -11,10 +11,11 @@ type SetupInfo = {
 };
 type Voice = { id: string; name: string; labels: Record<string, string> };
 
-export function Setup({ settings, onChanged, notify }: {
+export function Setup({ settings, onChanged, notify, ephemeralReason }: {
   settings: Settings;
   onChanged: () => void;
   notify: (msg: string, bad?: boolean) => void;
+  ephemeralReason: string | null;
 }) {
   const [info, setInfo] = useState<SetupInfo | null>(null);
   const [voices, setVoices] = useState<Voice[]>([]);
@@ -225,14 +226,25 @@ export function Setup({ settings, onChanged, notify }: {
               </div>
             </label>
 
-            <label className="switch" style={draft.dryRun ? undefined : { borderColor: "color-mix(in oklch, var(--stop) 45%, var(--line-soft))" }}>
-              <input type="checkbox" checked={!draft.dryRun}
+            <label
+              className="switch"
+              style={
+                ephemeralReason ? { opacity: 0.6 }
+                : draft.dryRun ? undefined
+                : { borderColor: "color-mix(in oklch, var(--stop) 45%, var(--line-soft))" }
+              }
+            >
+              <input type="checkbox" checked={!draft.dryRun} disabled={Boolean(ephemeralReason)}
                 onChange={(e) => saveSettings({ dryRun: !e.target.checked })} />
               <div>
                 <strong>Place real calls</strong>
                 <small>
-                  Off means every call is simulated end to end — the queue, transcripts, and outcomes all
-                  behave normally, nothing dials. Turn it on only when you mean it.
+                  {ephemeralReason ?? (
+                    <>
+                      Off means every call is simulated end to end — the queue, transcripts, and outcomes
+                      all behave normally, nothing dials. Turn it on only when you mean it.
+                    </>
+                  )}
                 </small>
               </div>
             </label>

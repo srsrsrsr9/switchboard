@@ -104,16 +104,33 @@ A `Dockerfile` and a Render blueprint (`render.yaml`) are included.
 
 ### Render
 
-1. **New → Blueprint**, point it at this repo. `render.yaml` provisions a Docker web
-   service with a 1 GB disk mounted at `/data`.
-2. Set the environment variables it asks for. `APP_PASSWORD` is required — see below.
-   `ELEVENLABS_API_KEY`, `TWILIO_ACCOUNT_SID`, and `TWILIO_PHONE_NUMBER` come from your
-   local `.env.local`; `ELEVENLABS_AGENT_ID` and `ELEVENLABS_PHONE_NUMBER_ID` are filled in
-   once the Setup tab has provisioned them.
-3. Leave `DRY_RUN=1` until you have signed in and checked the console over the deployed URL.
+`render.yaml` as committed targets the **free** plan, which means no persistent disk.
 
-The disk needs a paid instance type (Starter). Without it the store resets on every
-restart and redeploy, which loses the roster mid-campaign.
+1. **New → Blueprint**, point it at this repo.
+2. Set `APP_PASSWORD` when prompted. Nothing else is required for a simulation instance.
+3. Open the URL, sign in.
+
+### Ephemeral hosts cannot dial
+
+A free Render instance spins down after 15 minutes without traffic and has an ephemeral
+filesystem, so the store — including **the do-not-call list and the per-contact attempt
+counters** — is lost on every restart, redeploy, and spin-down. Losing that means calling
+someone again after they asked not to be called, which is the exact failure the compliance
+gate exists to prevent. The dialer loop also stops when the instance sleeps, orphaning any
+call in flight.
+
+So `EPHEMERAL_STORAGE=1` disables live dialing outright, at three layers:
+
+- the store forces `dryRun` back on at load, so a stale or edited store cannot re-enable it
+- `PATCH /api/settings` rejects `dryRun: false` with a 409
+- the dialer re-checks immediately before placing a call and simulates instead
+
+The console is fully usable this way — import, queue, transcripts, outcomes, appointments
+all behave normally. Nothing dials.
+
+To run real campaigns, switch `plan` to `starter`, add the `disk` block commented at the
+bottom of `render.yaml`, and set `EPHEMERAL_STORAGE=0`. That instance type is billed
+monthly. Running locally is the other durable option, and is free.
 
 ### Authentication
 

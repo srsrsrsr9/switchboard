@@ -99,8 +99,11 @@ export function Console() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
-          <span className={settings.dryRun ? "mode mode--sim" : "mode mode--live"}>
-            {settings.dryRun ? "Simulation" : "Live dialing"}
+          <span
+            className={settings.dryRun ? "mode mode--sim" : "mode mode--live"}
+            title={state.ephemeralReason ?? undefined}
+          >
+            {state.ephemeralReason ? "Simulation only" : settings.dryRun ? "Simulation" : "Live dialing"}
           </span>
           {state.signedIn && (
             <button
@@ -144,7 +147,9 @@ export function Console() {
             <Roster contacts={contacts} requireConsent={settings.requireConsent} onChanged={refresh} notify={notify} />
           )}
           {tab === "appointments" && <Appointments calls={calls} contacts={contacts} />}
-          {tab === "setup" && <Setup settings={settings} onChanged={refresh} notify={notify} />}
+          {tab === "setup" && (
+            <Setup settings={settings} onChanged={refresh} notify={notify} ephemeralReason={state.ephemeralReason} />
+          )}
         </div>
 
         <div className="column column--right">

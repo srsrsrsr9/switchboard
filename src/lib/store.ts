@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { Store, Settings } from "./types";
+import { storageIsDurable } from "./storage";
 
 // DATA_DIR lets a deployment point this at a mounted volume that survives restarts.
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
@@ -56,6 +57,8 @@ function load(): Store {
   // Env is the source of truth for provisioning ids when present.
   if (process.env.ELEVENLABS_AGENT_ID) s.settings.agentId = process.env.ELEVENLABS_AGENT_ID;
   if (process.env.ELEVENLABS_PHONE_NUMBER_ID) s.settings.phoneNumberId = process.env.ELEVENLABS_PHONE_NUMBER_ID;
+  // An ephemeral deployment can lose the DNC list, so it may only ever simulate.
+  if (!storageIsDurable()) s.settings.dryRun = true;
   g.__callerStore = s;
   return s;
 }

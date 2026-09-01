@@ -10,6 +10,8 @@ export type StatePayload = {
   campaign: import("@/lib/types").CampaignState;
   counts: Record<string, number>;
   signedIn: boolean;
+  durableStorage: boolean;
+  ephemeralReason: string | null;
   configured: { apiKey: boolean; agent: boolean; phone: boolean };
 };
 

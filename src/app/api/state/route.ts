@@ -3,6 +3,7 @@ import { canCallNow, contactLocalTime } from "@/lib/compliance";
 import { resumeIfRunning } from "@/lib/dialer";
 import { ok } from "@/lib/api";
 import { authMode } from "@/lib/auth";
+import { EPHEMERAL_REASON, storageIsDurable } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,8 @@ export async function GET(req: Request) {
     campaign: s.campaign,
     counts,
     signedIn: authMode(new URL(req.url).host) === "password",
+    durableStorage: storageIsDurable(),
+    ephemeralReason: storageIsDurable() ? null : EPHEMERAL_REASON,
     configured: {
       apiKey: Boolean(process.env.ELEVENLABS_API_KEY),
       agent: Boolean(s.settings.agentId),
