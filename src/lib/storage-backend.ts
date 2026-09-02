@@ -21,22 +21,58 @@ export function backendKind(): "redis" | "file" {
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
 const FILE = path.join(DATA_DIR, "store.json");
 
+const RETRY_DELAYS_MS = [250, 1000, 3000];
+
+/**
+ * One command against the store, retried on transport failures and 5xx.
+ *
+ * A container waking from sleep often makes its first request into a cold
+ * network path, and a single blip there would otherwise surface as an empty
+ * roster — which, for a store holding the do-not-call list, is the worst
+ * possible way to fail. Auth and request errors are not retried: those will
+ * never succeed and should be reported immediately.
+ */
 async function redis(command: unknown[]): Promise<unknown> {
-  const res = await fetch(REST_URL(), {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${REST_TOKEN()}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(command),
-    cache: "no-store",
-  });
-  if (!res.ok) {
-    throw new Error(`Storage backend returned HTTP ${res.status}`);
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+    if (attempt > 0) {
+      await new Promise((r) => setTimeout(r, RETRY_DELAYS_MS[attempt - 1]));
+    }
+    try {
+      const res = await fetch(REST_URL(), {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${REST_TOKEN()}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(command),
+        cache: "no-store",
+        signal: AbortSignal.timeout(10_000),
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        throw new Error("Storage credentials were rejected. Check the storage settings.");
+      }
+      if (res.status >= 500 || res.status === 429) {
+        lastError = new Error(`Storage backend returned HTTP ${res.status}`);
+        continue;
+      }
+      if (!res.ok) throw new Error(`Storage backend returned HTTP ${res.status}`);
+
+      const body = (await res.json()) as { result?: unknown; error?: string };
+      if (body.error) throw new Error(`Storage backend: ${body.error}`);
+      return body.result;
+    } catch (err) {
+      // Credential failures are final; anything else is worth another go.
+      if (err instanceof Error && err.message.includes("credentials were rejected")) throw err;
+      lastError = err;
+    }
   }
-  const body = (await res.json()) as { result?: unknown; error?: string };
-  if (body.error) throw new Error(`Storage backend: ${body.error}`);
-  return body.result;
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("Storage backend did not respond after several attempts.");
 }
 
 export async function readBlob(): Promise<string | null> {

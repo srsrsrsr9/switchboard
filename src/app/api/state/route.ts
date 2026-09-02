@@ -1,4 +1,4 @@
-import { ensureStore, getStore } from "@/lib/store";
+import { ensureStore, getStore, storeLoadError } from "@/lib/store";
 import { activeOverride, canCallNow, contactLocalTime } from "@/lib/compliance";
 import { resumeIfRunning } from "@/lib/dialer";
 import { ok } from "@/lib/api";
@@ -33,6 +33,7 @@ export async function GET(req: Request) {
       return o ? { ...o, remainingMs: o.until - now.getTime() } : null;
     })(),
     durableStorage: storageIsDurable(),
+    storeError: storeLoadError(),
     ephemeralReason: storageIsDurable() ? null : EPHEMERAL_REASON,
     configured: {
       apiKey: Boolean(process.env.ELEVENLABS_API_KEY),

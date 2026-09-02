@@ -11,6 +11,7 @@ export type StatePayload = {
   counts: Record<string, number>;
   signedIn: boolean;
   durableStorage: boolean;
+  storeError: string | null;
   override:
     | (import("@/lib/types").Override & { remainingMs: number })
     | null;

@@ -35,6 +35,7 @@ type G = typeof globalThis & {
   __callerLoad?: Promise<Store>;
   __callerFlush?: ReturnType<typeof setTimeout> | null;
   __callerDirty?: boolean;
+  __callerLoadError?: string | null;
 };
 const g = globalThis as G;
 
@@ -68,20 +69,38 @@ function hydrate(raw: string | null): Store {
  * Load the store once per process. Every route awaits this before touching
  * state; afterwards getStore() is a synchronous read of the in-memory copy.
  */
-export async function ensureStore(): Promise<Store> {
-  if (g.__callerStore) return g.__callerStore;
-  if (!g.__callerLoad) {
-    g.__callerLoad = readBlob()
-      .catch((err) => {
-        console.error("[store] could not read from storage backend:", err);
-        return null;
-      })
-      .then((raw) => {
-        g.__callerStore = hydrate(raw);
-        return g.__callerStore;
-      });
+async function loadOnce(): Promise<Store> {
+  try {
+    const raw = await readBlob();
+    g.__callerLoadError = null;
+    g.__callerStore = hydrate(raw);
+  } catch (err) {
+    // Storage exists but could not be read. Coming up with an empty store would
+    // mean an empty do-not-call list, so the console holds calls and says why.
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[store] could not read records:", message);
+    g.__callerLoadError = message;
+    const safe = hydrate(null);
+    safe.settings.dryRun = true;
+    g.__callerStore = safe;
+  } finally {
+    // Cleared either way, so a failed read is retried on the next request.
+    g.__callerLoad = undefined;
   }
+  return g.__callerStore as Store;
+}
+
+export async function ensureStore(): Promise<Store> {
+  // A store loaded cleanly is reused. One loaded after a failure is retried,
+  // so the console recovers on its own when storage comes back.
+  if (g.__callerStore && !g.__callerLoadError) return g.__callerStore;
+  if (!g.__callerLoad) g.__callerLoad = loadOnce();
   return g.__callerLoad;
+}
+
+/** Set when the last load failed, so the UI can say the records are unreachable. */
+export function storeLoadError(): string | null {
+  return g.__callerLoadError ?? null;
 }
 
 /** Synchronous access to the loaded store. Call ensureStore() first. */
@@ -91,6 +110,11 @@ export function getStore(): Store {
 }
 
 export function persist(): void {
+  // Never write an empty store over good data after a failed read.
+  if (g.__callerLoadError) {
+    console.warn("[store] refusing to write while records are unreachable");
+    return;
+  }
   g.__callerDirty = true;
   if (g.__callerFlush) return;
   g.__callerFlush = setTimeout(() => {

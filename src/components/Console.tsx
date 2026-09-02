@@ -135,6 +135,16 @@ export function Console() {
         </div>
       </header>
 
+      {state.storeError && (
+        <div className="notice notice--warn" style={{ margin: "var(--space-md) var(--space-lg) 0", borderRadius: "var(--radius)" }}>
+          <strong>Records are unreachable — calls are on hold</strong>
+          <span>
+            The console cannot read its records right now, so it will not dial. It keeps retrying;
+            nothing has been lost. ({state.storeError})
+          </span>
+        </div>
+      )}
+
       {state.override && <OverrideBanner live={state.override} onClear={clearOverride} />}
 
       {campaign.lastError && (
