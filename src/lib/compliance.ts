@@ -12,15 +12,38 @@ export function activeOverride(s: Settings, now = Date.now()): Override | null {
   return o;
 }
 
+/** True while a manual enforcement window is running. */
+export function isEnforcing(s: Settings, now = Date.now()): boolean {
+  return Boolean(s.enforceUntil && s.enforceUntil > now);
+}
+
+/**
+ * Whether the schedule gates are currently off. Two ways that happens: the
+ * deployment runs relaxed by default and nobody has switched enforcement on,
+ * or an operator set a temporary override. Do-not-call and the attempt cap are
+ * outside this entirely and apply in every case.
+ */
+function relaxations(s: Settings, now: number): { callingHours: boolean; weekends: boolean; consent: boolean } {
+  if (s.relaxedByDefault && !isEnforcing(s, now)) {
+    return { callingHours: true, weekends: true, consent: true };
+  }
+  const ov = activeOverride(s, now);
+  return {
+    callingHours: Boolean(ov?.callingHours),
+    weekends: Boolean(ov?.weekends),
+    consent: Boolean(ov?.consent),
+  };
+}
+
 /**
  * Every call passes through here first. A blocked contact is either skipped
  * permanently (DNC, no consent, attempts exhausted) or deferred with a retryAt.
  */
 export function canCallNow(c: Contact, s: Settings, now = new Date()): Gate {
-  const ov = activeOverride(s, now.getTime());
+  const ov = relaxations(s, now.getTime());
 
-  // Neither of these is overridable, by design. An operator override exists to
-  // shift *when* a call may go out, never to call someone who opted out.
+  // Neither of these is relaxable, by design. Relaxing shifts *when* a call may
+  // go out, never whether someone who opted out can be called.
   if (c.dnc) return { allowed: false, reason: "On do-not-call list" };
   if (c.attempts >= s.maxAttempts) return { allowed: false, reason: `Reached ${s.maxAttempts}-attempt limit` };
 

@@ -110,6 +110,19 @@ A `Dockerfile` and a Render blueprint (`render.yaml`) are included.
 2. Set `APP_PASSWORD` when prompted. Nothing else is required for a simulation instance.
 3. Open the URL, sign in.
 
+### Posture
+
+Demo deployments run **relaxed**: local calling hours, the weekend block, and the consent
+requirement are all off, so an operator never has to remember a toggle before dialling. The
+masthead carries a permanent banner saying so, and one button switches the full rules on
+for an hour at a time.
+
+Do-not-call suppression and the attempt cap are outside this entirely and apply in every
+posture.
+
+Set `RELAX_BY_DEFAULT=0` for production and it inverts: the full gate applies, and the
+temporary override becomes the exception rather than the norm.
+
 ### Records storage
 
 The store holds the do-not-call list and per-contact attempt counts, so it has to

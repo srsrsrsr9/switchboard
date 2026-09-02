@@ -12,6 +12,7 @@ export type StatePayload = {
   signedIn: boolean;
   durableStorage: boolean;
   storeError: string | null;
+  posture: { relaxedByDefault: boolean; enforcing: boolean; enforceRemainingMs: number };
   override:
     | (import("@/lib/types").Override & { remainingMs: number })
     | null;

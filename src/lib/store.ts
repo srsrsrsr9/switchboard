@@ -15,6 +15,10 @@ const DEFAULT_SETTINGS: Settings = {
   requireConsent: true,
   dryRun: process.env.DRY_RUN !== "0",
   override: null,
+  // Demo deployments run relaxed so an operator never has to remember a toggle.
+  // Set RELAX_BY_DEFAULT=0 for production and the full gate applies again.
+  relaxedByDefault: process.env.RELAX_BY_DEFAULT !== "0",
+  enforceUntil: null,
   business: {
     name: "Meridian Tax Resolution",
     agentName: "Avery",

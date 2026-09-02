@@ -69,6 +69,10 @@ export type Settings = {
   requireConsent: boolean;
   dryRun: boolean;
   override: Override | null;
+  /** Demo posture: the schedule gates are off unless enforcement is switched on. */
+  relaxedByDefault: boolean;
+  /** While in the future, full rules apply despite relaxedByDefault. */
+  enforceUntil: number | null;
   business: {
     name: string;
     agentName: string;

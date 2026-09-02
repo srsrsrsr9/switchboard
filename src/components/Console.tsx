@@ -6,6 +6,7 @@ import { Lines } from "./Lines";
 import { Appointments } from "./Appointments";
 import { Setup } from "./Setup";
 import { OverrideBanner, OverrideControl } from "./Override";
+import { PostureBanner, PostureControl } from "./Posture";
 
 type Tab = "roster" | "appointments" | "setup";
 
@@ -110,7 +111,11 @@ export function Console() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
-          <OverrideControl live={state.override} onChanged={refresh} notify={notify} />
+          {state.posture.relaxedByDefault ? (
+            <PostureControl posture={state.posture} onChanged={refresh} notify={notify} />
+          ) : (
+            <OverrideControl live={state.override} onChanged={refresh} notify={notify} />
+          )}
           <span
             className={settings.dryRun ? "mode mode--sim" : "mode mode--live"}
             title={
@@ -145,7 +150,9 @@ export function Console() {
         </div>
       )}
 
-      {state.override && <OverrideBanner live={state.override} onClear={clearOverride} />}
+      {state.posture.relaxedByDefault
+        ? <PostureBanner posture={state.posture} />
+        : state.override && <OverrideBanner live={state.override} onClear={clearOverride} />}
 
       {campaign.lastError && (
         <div className="notice notice--warn" style={{ margin: "var(--space-md) var(--space-lg) 0", borderRadius: "var(--radius)" }}>
