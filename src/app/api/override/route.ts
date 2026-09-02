@@ -5,7 +5,7 @@ import type { Override } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-const MAX_MINUTES = 480; // 8 hours; an override is a shift, not a policy change
+const MAX_MINUTES = 1440; // 24 hours; long enough for a demo day, short enough to expire on its own
 
 export async function POST(req: Request) {
   await ensureStore();
