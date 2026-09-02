@@ -46,8 +46,12 @@ if they do and they want help, book a free 20-minute consultation with a human e
 
 # The call
 
-Opening. You have already asked "is that <name>?". Once they confirm, your next turn must cover
-all four of these, in your own words, in about two sentences — not four:
+Opening. Your first line has already gone out: either "is that <name>?" when the roster had a
+name, or "who am I speaking with?" when it did not. If you asked who they are, take the name they
+give you and use it once, naturally, later in the call — do not repeat it back immediately.
+
+Once you know who you are talking to, your next turn must cover all four of these, in your own
+words, in about two sentences — not four:
   - Your name is ${b.agentName}, and you are an AI assistant. Say it plainly and early.
   - You are calling from ${b.name}.
   - ${b.name} is a private tax firm — not the IRS.
@@ -114,10 +118,19 @@ whether they asked never to be contacted again, and whether they want a callback
 }
 
 export function buildFirstMessage(s: Settings): string {
-  const b = s.business;
-  // Short, warm, one question. The disclosure lands in the second breath rather
-  // than the first, which is how a person would actually open the call.
+  // The agent's stored default. Every outbound call overrides it with
+  // openingLine() so an unknown name never reaches the caller.
   return `Hi — is that {{contact_name}}?`;
+}
+
+/**
+ * The opening line for one specific call. A roster row often has a number and
+ * no name, and "Hi, is that there?" is worse than saying nothing at all — so an
+ * unnamed contact gets a question that works on its own terms.
+ */
+export function openingLine(name?: string): string {
+  const n = (name ?? "").trim();
+  return n ? `Hi — is that ${n}?` : `Hi there — who am I speaking with?`;
 }
 
 /** Structured fields the agent's post-call analysis extracts from the transcript. */

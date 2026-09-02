@@ -2,6 +2,7 @@ import { ensureStore, getStore, persist, newId } from "./store";
 import { canCallNow } from "./compliance";
 import { storageIsDurable } from "./storage";
 import * as el from "./elevenlabs";
+import { openingLine } from "./script";
 import type { Call, Contact, ContactStatus, Store } from "./types";
 
 const TICK_MS = 2500;
@@ -123,6 +124,7 @@ async function placeCall(s: Store, contact: Contact) {
         contact_name: contact.name || "there",
         company: contact.company || "",
       },
+      firstMessage: openingLine(contact.name),
     });
     if (!res.success || !res.conversation_id) {
       failCall(call, contact, res.message || "The call could not be placed");

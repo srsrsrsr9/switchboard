@@ -104,6 +104,10 @@ function agentBody(s: Settings, voiceId: string) {
     platform_settings: {
       data_collection: DATA_COLLECTION,
       evaluation: { criteria: EVALUATION_CRITERIA },
+      // The opening line is chosen per call, so it has to be overridable.
+      overrides: {
+        conversation_config_override: { agent: { first_message: true } },
+      },
     },
   };
 }
@@ -152,6 +156,7 @@ export type OutboundResult = {
 export async function outboundCall(args: {
   agentId: string; phoneNumberId: string; toNumber: string;
   dynamicVariables: Record<string, string>;
+  firstMessage?: string;
 }): Promise<OutboundResult> {
   return call<OutboundResult>("/convai/twilio/outbound-call", {
     method: "POST",
@@ -159,7 +164,12 @@ export async function outboundCall(args: {
       agent_id: args.agentId,
       agent_phone_number_id: args.phoneNumberId,
       to_number: args.toNumber,
-      conversation_initiation_client_data: { dynamic_variables: args.dynamicVariables },
+      conversation_initiation_client_data: {
+        dynamic_variables: args.dynamicVariables,
+        ...(args.firstMessage
+          ? { conversation_config_override: { agent: { first_message: args.firstMessage } } }
+          : {}),
+      },
       telephony_call_config: { ringing_timeout_secs: 35 },
     }),
   });
