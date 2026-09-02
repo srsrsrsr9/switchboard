@@ -1,4 +1,4 @@
-import { getStore, persist } from "@/lib/store";
+import { ensureStore, getStore, persist } from "@/lib/store";
 import { ok, bad, errorMessage } from "@/lib/api";
 import { EPHEMERAL_REASON, storageIsDurable } from "@/lib/storage";
 
@@ -13,6 +13,7 @@ const NUMERIC: Record<string, [number, number]> = {
 };
 
 export async function PATCH(req: Request) {
+  await ensureStore();
   try {
     const patch = (await req.json()) as Record<string, unknown>;
     const s = getStore();

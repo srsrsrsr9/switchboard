@@ -110,6 +110,18 @@ A `Dockerfile` and a Render blueprint (`render.yaml`) are included.
 2. Set `APP_PASSWORD` when prompted. Nothing else is required for a simulation instance.
 3. Open the URL, sign in.
 
+### Records storage
+
+The store holds the do-not-call list and per-contact attempt counts, so it has to
+outlive the container. Set `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` and the
+console keeps everything in an external store over plain HTTPS — no driver, no pooling.
+Without them it writes `data/store.json` on local disk, which is fine locally and useless
+on an ephemeral host.
+
+`EPHEMERAL_STORAGE=1` stays set on deployed instances as a safety net: if the storage
+settings are ever removed, the console falls back to rehearsal rather than dialling with a
+do-not-call list it cannot keep.
+
 ### Ephemeral hosts cannot dial
 
 A free Render instance spins down after 15 minutes without traffic and has an ephemeral

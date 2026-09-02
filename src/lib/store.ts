@@ -1,11 +1,6 @@
-import fs from "node:fs";
-import path from "node:path";
 import type { Store, Settings } from "./types";
 import { storageIsDurable } from "./storage";
-
-// DATA_DIR lets a deployment point this at a mounted volume that survives restarts.
-const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
-const FILE = path.join(DATA_DIR, "store.json");
+import { readBlob, writeBlob } from "./storage-backend";
 
 const DEFAULT_SETTINGS: Settings = {
   agentId: process.env.ELEVENLABS_AGENT_ID || "",
@@ -35,59 +30,82 @@ function emptyStore(): Store {
   return { contacts: [], calls: [], settings: { ...DEFAULT_SETTINGS }, campaign: { running: false } };
 }
 
-type G = typeof globalThis & { __callerStore?: Store; __callerWriteQueue?: Promise<void> };
+type G = typeof globalThis & {
+  __callerStore?: Store;
+  __callerLoad?: Promise<Store>;
+  __callerFlush?: ReturnType<typeof setTimeout> | null;
+  __callerDirty?: boolean;
+};
 const g = globalThis as G;
 
-function load(): Store {
-  if (g.__callerStore) return g.__callerStore;
+function hydrate(raw: string | null): Store {
   let s = emptyStore();
-  try {
-    if (fs.existsSync(FILE)) {
-      const parsed = JSON.parse(fs.readFileSync(FILE, "utf8")) as Partial<Store>;
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw) as Partial<Store>;
       s = {
         contacts: parsed.contacts ?? [],
         calls: parsed.calls ?? [],
-        settings: { ...DEFAULT_SETTINGS, ...(parsed.settings ?? {}),
-                    business: { ...DEFAULT_SETTINGS.business, ...(parsed.settings?.business ?? {}) } },
+        settings: {
+          ...DEFAULT_SETTINGS,
+          ...(parsed.settings ?? {}),
+          business: { ...DEFAULT_SETTINGS.business, ...(parsed.settings?.business ?? {}) },
+        },
         campaign: { ...(parsed.campaign ?? { running: false }), running: false },
       };
+    } catch (err) {
+      console.error("[store] stored data was unreadable, starting fresh:", err);
     }
-  } catch (err) {
-    console.error("[store] could not read store.json, starting fresh:", err);
   }
   // Env is the source of truth for provisioning ids when present.
   if (process.env.ELEVENLABS_AGENT_ID) s.settings.agentId = process.env.ELEVENLABS_AGENT_ID;
   if (process.env.ELEVENLABS_PHONE_NUMBER_ID) s.settings.phoneNumberId = process.env.ELEVENLABS_PHONE_NUMBER_ID;
-  // An ephemeral deployment can lose the DNC list, so it may only ever simulate.
   if (!storageIsDurable()) s.settings.dryRun = true;
-  g.__callerStore = s;
   return s;
 }
 
-/** In-memory store; every mutation is flushed to disk atomically. */
-export function getStore(): Store {
-  return load();
+/**
+ * Load the store once per process. Every route awaits this before touching
+ * state; afterwards getStore() is a synchronous read of the in-memory copy.
+ */
+export async function ensureStore(): Promise<Store> {
+  if (g.__callerStore) return g.__callerStore;
+  if (!g.__callerLoad) {
+    g.__callerLoad = readBlob()
+      .catch((err) => {
+        console.error("[store] could not read from storage backend:", err);
+        return null;
+      })
+      .then((raw) => {
+        g.__callerStore = hydrate(raw);
+        return g.__callerStore;
+      });
+  }
+  return g.__callerLoad;
 }
 
-let flushTimer: NodeJS.Timeout | null = null;
+/** Synchronous access to the loaded store. Call ensureStore() first. */
+export function getStore(): Store {
+  if (!g.__callerStore) g.__callerStore = hydrate(null);
+  return g.__callerStore;
+}
+
 export function persist(): void {
-  load();
-  if (flushTimer) return;
-  flushTimer = setTimeout(() => {
-    flushTimer = null;
-    try {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-      const tmp = FILE + ".tmp";
-      fs.writeFileSync(tmp, JSON.stringify(g.__callerStore, null, 2));
-      fs.renameSync(tmp, FILE);
-    } catch (err) {
+  g.__callerDirty = true;
+  if (g.__callerFlush) return;
+  g.__callerFlush = setTimeout(() => {
+    g.__callerFlush = null;
+    if (!g.__callerDirty || !g.__callerStore) return;
+    g.__callerDirty = false;
+    void writeBlob(JSON.stringify(g.__callerStore)).catch((err) => {
       console.error("[store] write failed:", err);
-    }
-  }, 250);
+      g.__callerDirty = true;
+    });
+  }, 400);
 }
 
 export function mutate<T>(fn: (s: Store) => T): T {
-  const s = load();
+  const s = getStore();
   const out = fn(s);
   persist();
   return out;

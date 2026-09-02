@@ -5,29 +5,35 @@ services:
     plan: free
     healthCheckPath: /login
     envVars:
-      # Required. The console refuses to serve without it — see README.
+      # Required. The console refuses to serve without it.
       - key: APP_PASSWORD
         sync: false
-      # Free instances have no persistent disk, so the do-not-call list and
-      # attempt counters cannot survive a restart or spin-down. This locks the
-      # deployment to simulation; real dialing belongs on durable storage.
+
+      # Records live outside the container so the do-not-call list and attempt
+      # counts survive a restart or spin-down. With these set, live calling is
+      # permitted; without them the console falls back to rehearsal only.
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
+
+      # Left at 1 deliberately: it is the safety net. If the storage settings
+      # above are ever removed, the console drops back to rehearsal rather than
+      # dialling with a do-not-call list it cannot keep.
       - key: EPHEMERAL_STORAGE
         value: "1"
+
+      # 0 places real calls. Set to 1 to rehearse.
       - key: DRY_RUN
-        value: "1"
-      # Optional here: only the Setup tab's voice list and provisioning use them.
+        value: "0"
+
       - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: ELEVENLABS_AGENT_ID
+        sync: false
+      - key: ELEVENLABS_PHONE_NUMBER_ID
         sync: false
       - key: TWILIO_ACCOUNT_SID
         sync: false
       - key: TWILIO_PHONE_NUMBER
         sync: false
-      - key: ELEVENLABS_AGENT_ID
-        sync: false
-
-# To run real campaigns instead, switch plan to `starter` and add:
-#   disk:
-#     name: switchboard-data
-#     mountPath: /data
-#     sizeGB: 1
-# then set EPHEMERAL_STORAGE to "0". The Dockerfile already points DATA_DIR at /data.

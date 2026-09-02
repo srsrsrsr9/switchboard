@@ -8,10 +8,12 @@
  * outright when storage is ephemeral — the console still runs, in simulation.
  */
 export function storageIsDurable(): boolean {
+  // An external store outlives the container, so the host being ephemeral no
+  // longer matters — that is the whole point of configuring one.
+  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) return true;
   return process.env.EPHEMERAL_STORAGE !== "1";
 }
 
 export const EPHEMERAL_REASON =
-  "This is a demo environment: it does not keep records between restarts, so the do-not-call " +
-  "list cannot be relied on here. Live calling is switched off for that reason. Use the main " +
-  "console to place real calls.";
+  "This deployment has nowhere durable to keep records, so the do-not-call list would not " +
+  "survive a restart. Live calling is switched off until a storage backend is configured.";

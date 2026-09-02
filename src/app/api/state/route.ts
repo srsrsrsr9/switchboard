@@ -1,4 +1,4 @@
-import { getStore } from "@/lib/store";
+import { ensureStore, getStore } from "@/lib/store";
 import { activeOverride, canCallNow, contactLocalTime } from "@/lib/compliance";
 import { resumeIfRunning } from "@/lib/dialer";
 import { ok } from "@/lib/api";
@@ -8,6 +8,7 @@ import { EPHEMERAL_REASON, storageIsDurable } from "@/lib/storage";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
+  await ensureStore();
   resumeIfRunning();
   const s = getStore();
   const now = new Date();

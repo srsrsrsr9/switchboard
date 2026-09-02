@@ -1,11 +1,14 @@
-import { getStore, persist } from "@/lib/store";
+import { ensureStore, getStore, persist } from "@/lib/store";
 import * as el from "@/lib/elevenlabs";
 import { writeEnv } from "@/lib/env-file";
 import { ok, bad, errorMessage } from "@/lib/api";
+import { pingBackend } from "@/lib/storage-backend";
+import { storageIsDurable } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  await ensureStore();
   const s = getStore();
   const out: Record<string, unknown> = {
     hasApiKey: Boolean(process.env.ELEVENLABS_API_KEY),
@@ -16,6 +19,7 @@ export async function GET() {
     accountId: process.env.TWILIO_ACCOUNT_SID ?? "",
     outboundNumber: process.env.TWILIO_PHONE_NUMBER ?? "",
     hasToken: Boolean(process.env.TWILIO_AUTH_TOKEN),
+    storage: { ...(await pingBackend()), durable: storageIsDurable() },
   };
   try {
     out.tier = (await el.whoami()).tier;
@@ -27,6 +31,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  await ensureStore();
   try {
     const body = (await req.json()) as { action?: string; voiceId?: string; accessToken?: string; label?: string };
     const s = getStore();

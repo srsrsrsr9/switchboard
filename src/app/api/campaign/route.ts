@@ -1,9 +1,11 @@
+import { ensureStore } from "@/lib/store";
 import { startCampaign, stopCampaign } from "@/lib/dialer";
 import { ok, bad, errorMessage } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
+  await ensureStore();
   try {
     const { action } = (await req.json()) as { action?: string };
     if (action === "start") {

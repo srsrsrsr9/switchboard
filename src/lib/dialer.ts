@@ -1,4 +1,4 @@
-import { getStore, persist, newId } from "./store";
+import { ensureStore, getStore, persist, newId } from "./store";
 import { canCallNow } from "./compliance";
 import { storageIsDurable } from "./storage";
 import * as el from "./elevenlabs";
@@ -46,7 +46,7 @@ async function tick() {
   if (engine.ticking) return;
   engine.ticking = true;
   try {
-    const s = getStore();
+    const s = await ensureStore();
     s.campaign.lastTickAt = Date.now();
     await refreshActiveCalls(s);
     if (s.campaign.running) await dialNext(s);

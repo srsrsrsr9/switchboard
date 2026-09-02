@@ -6,6 +6,7 @@ import { api } from "./ui";
 type SetupInfo = {
   hasApiKey: boolean; agentId: string; phoneNumberId: string;
   accountId: string; outboundNumber: string; hasToken: boolean;
+  storage?: { ok: boolean; kind: string; durable: boolean; error?: string };
   tier?: string; error?: string;
 };
 type Voice = { id: string; name: string; labels: Record<string, string> };
@@ -74,6 +75,19 @@ export function Setup({ settings, onChanged, notify, ephemeralReason }: {
   return (
     <div className="pane">
       <div className="setup">
+        {info?.storage && !info.storage.ok && (
+          <div className="notice notice--warn">
+            <strong>Records storage is unreachable</strong>
+            <span>{info.storage.error ?? "The configured storage backend did not respond."}</span>
+          </div>
+        )}
+        {info?.storage?.ok && info.storage.kind === "redis" && (
+          <div className="notice notice--good">
+            <strong>Records are stored externally</strong>
+            <span>Contacts, outcomes, and the do-not-call list survive restarts.</span>
+          </div>
+        )}
+
         {info?.tier === "free" && (
           <div className="notice notice--warn">
             <strong>This workspace is on a free voice plan</strong>

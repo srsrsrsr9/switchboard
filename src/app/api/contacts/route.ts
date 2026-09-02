@@ -1,10 +1,11 @@
-import { getStore, persist } from "@/lib/store";
+import { ensureStore, getStore, persist } from "@/lib/store";
 import { parseContacts } from "@/lib/import";
 import { ok, bad, errorMessage } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
+  await ensureStore();
   try {
     const { text, defaultConsent } = (await req.json()) as { text?: string; defaultConsent?: boolean };
     if (!text || !text.trim()) return bad("Nothing to import.");
@@ -33,6 +34,7 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
+  await ensureStore();
   try {
     const { id, ...patch } = (await req.json()) as Record<string, unknown> & { id?: string };
     const s = getStore();
@@ -54,6 +56,7 @@ export async function PATCH(req: Request) {
 }
 
 export async function DELETE(req: Request) {
+  await ensureStore();
   try {
     const { id, all } = (await req.json()) as { id?: string; all?: boolean };
     const s = getStore();

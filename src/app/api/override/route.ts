@@ -1,4 +1,4 @@
-import { getStore, persist } from "@/lib/store";
+import { ensureStore, getStore, persist } from "@/lib/store";
 import { activeOverride } from "@/lib/compliance";
 import { ok, bad, errorMessage } from "@/lib/api";
 import type { Override } from "@/lib/types";
@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 const MAX_MINUTES = 480; // 8 hours; an override is a shift, not a policy change
 
 export async function POST(req: Request) {
+  await ensureStore();
   try {
     const body = (await req.json()) as {
       minutes?: number; callingHours?: boolean; weekends?: boolean; consent?: boolean; note?: string;
@@ -48,6 +49,7 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE() {
+  await ensureStore();
   const s = getStore();
   s.settings.override = null;
   persist();
@@ -56,6 +58,7 @@ export async function DELETE() {
 }
 
 export async function GET() {
+  await ensureStore();
   const s = getStore();
   return ok({ override: activeOverride(s.settings) });
 }
