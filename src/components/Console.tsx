@@ -5,6 +5,7 @@ import { Roster } from "./Roster";
 import { Lines } from "./Lines";
 import { Appointments } from "./Appointments";
 import { Setup } from "./Setup";
+import { OverrideBanner, OverrideControl } from "./Override";
 
 type Tab = "roster" | "appointments" | "setup";
 
@@ -34,6 +35,16 @@ export function Console() {
     const t = setInterval(() => void refresh(), 1500);
     return () => clearInterval(t);
   }, [refresh]);
+
+  async function clearOverride() {
+    try {
+      await api("/api/override", { method: "DELETE" });
+      notify("Back to normal rules");
+      await refresh();
+    } catch (err) {
+      notify(err instanceof Error ? err.message : String(err), true);
+    }
+  }
 
   async function toggleCampaign() {
     if (!state) return;
@@ -99,6 +110,7 @@ export function Console() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
+          <OverrideControl live={state.override} onChanged={refresh} notify={notify} />
           <span
             className={settings.dryRun ? "mode mode--sim" : "mode mode--live"}
             title={state.ephemeralReason ?? undefined}
@@ -118,6 +130,8 @@ export function Console() {
           )}
         </div>
       </header>
+
+      {state.override && <OverrideBanner live={state.override} onClear={clearOverride} />}
 
       {campaign.lastError && (
         <div className="notice notice--warn" style={{ margin: "var(--space-md) var(--space-lg) 0", borderRadius: "var(--radius)" }}>

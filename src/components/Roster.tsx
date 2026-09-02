@@ -65,8 +65,8 @@ export function Roster({ contacts, requireConsent, onChanged, notify }: Props) {
             <code>email</code>, <code>consent</code>, <code>dnc</code>, <code>notes</code>.
           </p>
           <p>
-            Numbers are normalised to E.164 and matched to a timezone by area code, so the dialer can keep
-            every call inside that person&apos;s local calling hours.
+            Numbers are tidied up automatically and matched to a timezone by area code, so every call
+            lands inside that person&apos;s own daytime hours.
           </p>
         </div>
       ) : (

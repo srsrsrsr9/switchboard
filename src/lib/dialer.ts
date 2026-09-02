@@ -125,7 +125,7 @@ async function placeCall(s: Store, contact: Contact) {
       },
     });
     if (!res.success || !res.conversation_id) {
-      failCall(call, contact, res.message || "ElevenLabs declined the call");
+      failCall(call, contact, res.message || "The call could not be placed");
       return;
     }
     call.conversationId = res.conversation_id;

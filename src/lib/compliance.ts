@@ -1,27 +1,41 @@
 import { localTimeAt } from "./phone";
-import type { Contact, Settings } from "./types";
+import type { Contact, Override, Settings } from "./types";
 
 export type Gate = { allowed: boolean; reason?: string; retryAt?: number };
 
 const WEEKEND = new Set(["Sat", "Sun"]);
+
+/** The override, or null once it has expired. Expiry is checked on every read. */
+export function activeOverride(s: Settings, now = Date.now()): Override | null {
+  const o = s.override;
+  if (!o || o.until <= now) return null;
+  return o;
+}
 
 /**
  * Every call passes through here first. A blocked contact is either skipped
  * permanently (DNC, no consent, attempts exhausted) or deferred with a retryAt.
  */
 export function canCallNow(c: Contact, s: Settings, now = new Date()): Gate {
+  const ov = activeOverride(s, now.getTime());
+
+  // Neither of these is overridable, by design. An operator override exists to
+  // shift *when* a call may go out, never to call someone who opted out.
   if (c.dnc) return { allowed: false, reason: "On do-not-call list" };
-  if (s.requireConsent && !c.consent) return { allowed: false, reason: "No consent on file" };
   if (c.attempts >= s.maxAttempts) return { allowed: false, reason: `Reached ${s.maxAttempts}-attempt limit` };
+
+  if (s.requireConsent && !c.consent && !ov?.consent) {
+    return { allowed: false, reason: "No consent on file" };
+  }
   if (c.nextAttemptAt && c.nextAttemptAt > now.getTime()) {
     return { allowed: false, reason: "Waiting for retry window", retryAt: c.nextAttemptAt };
   }
 
   const t = localTimeAt(c.timezone, now);
-  if (!s.weekendCalling && WEEKEND.has(t.weekday)) {
+  if (!s.weekendCalling && !ov?.weekends && WEEKEND.has(t.weekday)) {
     return { allowed: false, reason: `Weekend where they are (${t.label})`, retryAt: nextOpen(c, s, now) };
   }
-  if (t.hour < s.callWindowStart || t.hour >= s.callWindowEnd) {
+  if (!ov?.callingHours && (t.hour < s.callWindowStart || t.hour >= s.callWindowEnd)) {
     return {
       allowed: false,
       reason: `Outside ${s.callWindowStart}:00-${s.callWindowEnd}:00 local time (${t.label} for them)`,

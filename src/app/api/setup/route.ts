@@ -11,13 +11,15 @@ export async function GET() {
     hasApiKey: Boolean(process.env.ELEVENLABS_API_KEY),
     agentId: s.settings.agentId,
     phoneNumberId: s.settings.phoneNumberId,
-    twilioAccountSid: process.env.TWILIO_ACCOUNT_SID ?? "",
-    twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER ?? "",
-    hasTwilioToken: Boolean(process.env.TWILIO_AUTH_TOKEN),
+    // Deliberately neutral field names: this payload is visible in devtools and
+    // the console gets demoed to people outside the team.
+    accountId: process.env.TWILIO_ACCOUNT_SID ?? "",
+    outboundNumber: process.env.TWILIO_PHONE_NUMBER ?? "",
+    hasToken: Boolean(process.env.TWILIO_AUTH_TOKEN),
   };
   try {
     out.tier = (await el.whoami()).tier;
-    out.phoneNumbers = await el.listPhoneNumbers();
+    out.numbers = await el.listPhoneNumbers();
   } catch (err) {
     out.error = errorMessage(err);
   }
@@ -26,7 +28,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const body = (await req.json()) as { action?: string; voiceId?: string; twilioAuthToken?: string; label?: string };
+    const body = (await req.json()) as { action?: string; voiceId?: string; accessToken?: string; label?: string };
     const s = getStore();
 
     if (body.action === "agent") {
@@ -39,17 +41,17 @@ export async function POST(req: Request) {
       s.settings.agentId = agentId;
       persist();
       const envPersisted = writeEnv({ ELEVENLABS_AGENT_ID: agentId });
-      return ok({ agentId, created: true, envPersisted, envVar: "ELEVENLABS_AGENT_ID" });
+      return ok({ agentId, created: true, envPersisted, envVar: "the agent id" });
     }
 
     if (body.action === "phone") {
-      // The Twilio auth token is used for this one request and never stored.
-      const token = body.twilioAuthToken?.trim() || process.env.TWILIO_AUTH_TOKEN;
+      // The access token is used for this one request and never stored.
+      const token = body.accessToken?.trim() || process.env.TWILIO_AUTH_TOKEN;
       const sid = process.env.TWILIO_ACCOUNT_SID;
       const number = process.env.TWILIO_PHONE_NUMBER;
-      if (!sid) return bad("TWILIO_ACCOUNT_SID is missing from .env.local.");
-      if (!number) return bad("TWILIO_PHONE_NUMBER is missing from .env.local.");
-      if (!token) return bad("Paste your Twilio Auth Token to import the number.");
+      if (!sid) return bad("The phone line account is not configured on this server.");
+      if (!number) return bad("No outbound number is configured on this server.");
+      if (!token) return bad("Paste your access token to connect the number.");
 
       const existing = await el.listPhoneNumbers();
       const already = existing.find((p) => p.phone_number === number);
@@ -58,7 +60,7 @@ export async function POST(req: Request) {
         s.settings.fromNumber = number;
         persist();
         const envPersisted = writeEnv({ ELEVENLABS_PHONE_NUMBER_ID: already.phone_number_id });
-        return ok({ phoneNumberId: already.phone_number_id, reused: true, envPersisted, envVar: "ELEVENLABS_PHONE_NUMBER_ID" });
+        return ok({ phoneNumberId: already.phone_number_id, reused: true, envPersisted, envVar: "the number id" });
       }
 
       const phoneNumberId = await el.importTwilioNumber({
@@ -71,7 +73,7 @@ export async function POST(req: Request) {
       s.settings.fromNumber = number;
       persist();
       const envPersisted = writeEnv({ ELEVENLABS_PHONE_NUMBER_ID: phoneNumberId });
-      return ok({ phoneNumberId, created: true, envPersisted, envVar: "ELEVENLABS_PHONE_NUMBER_ID" });
+      return ok({ phoneNumberId, created: true, envPersisted, envVar: "the number id" });
     }
 
     return bad("Unknown setup action.");

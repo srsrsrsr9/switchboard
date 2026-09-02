@@ -5,9 +5,8 @@ import { api } from "./ui";
 
 type SetupInfo = {
   hasApiKey: boolean; agentId: string; phoneNumberId: string;
-  twilioAccountSid: string; twilioPhoneNumber: string; hasTwilioToken: boolean;
-  tier?: string; phoneNumbers?: { phone_number_id: string; phone_number: string; label?: string }[];
-  error?: string;
+  accountId: string; outboundNumber: string; hasToken: boolean;
+  tier?: string; error?: string;
 };
 type Voice = { id: string; name: string; labels: Record<string, string> };
 
@@ -46,7 +45,7 @@ export function Setup({ settings, onChanged, notify, ephemeralReason }: {
         body: JSON.stringify({ action, ...body }),
       });
       if (r.envPersisted === false && r.envVar) {
-        notify(`${msg}. Set ${r.envVar} in your host's env vars so it survives a redeploy.`);
+        notify(`${msg}. Save ${r.envVar} in the server settings so it survives a restart.`);
       } else notify(msg);
       setInfo(await api<SetupInfo>("/api/setup"));
       onChanged();
@@ -77,10 +76,10 @@ export function Setup({ settings, onChanged, notify, ephemeralReason }: {
       <div className="setup">
         {info?.tier === "free" && (
           <div className="notice notice--warn">
-            <strong>Your ElevenLabs plan is Free</strong>
+            <strong>This workspace is on a free voice plan</strong>
             <span>
-              Telephony on the Agents platform generally needs a paid plan. Everything here will build and
-              simulate fine, but a real outbound call may be refused until the workspace is upgraded.
+              Everything here works and rehearses normally, but placing a real call may be refused until
+              the plan is upgraded.
             </span>
           </div>
         )}
@@ -93,10 +92,10 @@ export function Setup({ settings, onChanged, notify, ephemeralReason }: {
             {agentReady && <span className="tag tag--good">ready</span>}
           </div>
           <p className="sec__hint">
-            Creates an ElevenLabs agent carrying the appointment script: it opens by disclosing that it
-            is an AI, states the firm is not the IRS, refuses to take SSNs or payment details, and stops
-            the moment someone asks to be removed. Re-run this after editing anything below to push the
-            new script.
+            Builds the calling agent from the appointment script: it opens by saying it is an automated
+            assistant, states the firm is not the IRS, refuses to take Social Security or payment details,
+            and stops the moment someone asks to be removed. Save again after editing anything below to
+            update what it says.
           </p>
           <div className="step__body">
             <div className="settings">
@@ -135,7 +134,7 @@ export function Setup({ settings, onChanged, notify, ephemeralReason }: {
                 onClick={() => run("agent", { voiceId }, agentReady ? "Agent script updated" : "Agent created")}>
                 {busy === "agent" ? "Working…" : agentReady ? "Push script update" : "Create the agent"}
               </button>
-              {agentReady && <span className="mono" style={{ marginLeft: 10, color: "var(--text-3)" }}>{settings.agentId}</span>}
+              {agentReady && <span style={{ marginLeft: 10, fontSize: "0.75rem", color: "var(--text-3)" }}>Configured</span>}
             </div>
           </div>
         </section>
@@ -150,32 +149,32 @@ export function Setup({ settings, onChanged, notify, ephemeralReason }: {
             {phoneReady && <span className="tag tag--good">ready</span>}
           </div>
           <p className="sec__hint">
-            Imports your Twilio number into ElevenLabs so the agent has a line to dial out on. The auth
-            token is used for this one request and is never written to disk.
+            Connects the phone line the agent dials out on. The access token is used once to make the
+            connection and is never stored.
           </p>
           <div className="step__body">
             <div className="settings">
               <div className="setting">
-                <label>Twilio account</label>
-                <input className="field mono" readOnly value={info?.twilioAccountSid || "not set in .env.local"} />
+                <label>Account</label>
+                <input className="field mono" readOnly value={info?.accountId || "not configured"} />
               </div>
               <div className="setting">
                 <label>Number</label>
-                <input className="field mono" readOnly value={info?.twilioPhoneNumber || "not set in .env.local"} />
+                <input className="field mono" readOnly value={info?.outboundNumber || "not configured"} />
               </div>
               <div className="setting">
-                <label htmlFor="tok">Twilio auth token</label>
+                <label htmlFor="tok">Access token</label>
                 <input id="tok" className="field" type="password" autoComplete="off" placeholder="paste it here"
                   value={token} onChange={(e) => setToken(e.target.value)} disabled={phoneReady} />
               </div>
             </div>
             <div>
               <button className="btn btn--go btn--sm"
-                disabled={busy === "phone" || phoneReady || (!token && !info?.hasTwilioToken)}
-                onClick={() => run("phone", { twilioAuthToken: token }, "Number connected").then(() => setToken(""))}>
+                disabled={busy === "phone" || phoneReady || (!token && !info?.hasToken)}
+                onClick={() => run("phone", { accessToken: token }, "Number connected").then(() => setToken(""))}>
                 {busy === "phone" ? "Connecting…" : phoneReady ? "Connected" : "Connect the number"}
               </button>
-              {phoneReady && <span className="mono" style={{ marginLeft: 10, color: "var(--text-3)" }}>{settings.phoneNumberId}</span>}
+              {phoneReady && <span style={{ marginLeft: 10, fontSize: "0.75rem", color: "var(--text-3)" }}>Connected</span>}
             </div>
           </div>
         </section>
@@ -251,7 +250,7 @@ export function Setup({ settings, onChanged, notify, ephemeralReason }: {
           </div>
         </section>
 
-        {info?.error && <div className="notice notice--warn"><strong>ElevenLabs</strong><span>{info.error}</span></div>}
+        {info?.error && <div className="notice notice--warn"><strong>Voice service</strong><span>{info.error}</span></div>}
       </div>
     </div>
   );

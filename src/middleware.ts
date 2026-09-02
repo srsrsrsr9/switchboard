@@ -12,8 +12,8 @@ export async function middleware(req: NextRequest) {
 
   if (mode === "misconfigured") {
     return new NextResponse(
-      "This deployment has no APP_PASSWORD set. Refusing to serve a console that can place " +
-        "outbound calls. Set APP_PASSWORD in the host's environment and redeploy.",
+      "This console has not been given an access password yet, so it will not open. " +
+        "Set one in the server settings and restart.",
       { status: 503, headers: { "content-type": "text/plain" } },
     );
   }

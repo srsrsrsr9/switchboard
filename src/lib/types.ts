@@ -42,6 +42,20 @@ export type Call = {
   simulated?: boolean;
 };
 
+/**
+ * A time-boxed relaxation of the schedule gates, set by an operator.
+ * Do-not-call suppression and the attempt cap are deliberately absent: those
+ * are not relaxable, and nothing in the UI offers to.
+ */
+export type Override = {
+  until: number;          // epoch ms; in the past means inactive
+  setAt: number;
+  callingHours: boolean;
+  weekends: boolean;
+  consent: boolean;
+  note?: string;
+};
+
 export type Settings = {
   agentId: string;
   phoneNumberId: string;
@@ -54,6 +68,7 @@ export type Settings = {
   weekendCalling: boolean;
   requireConsent: boolean;
   dryRun: boolean;
+  override: Override | null;
   business: {
     name: string;
     agentName: string;

@@ -12,6 +12,6 @@ export function storageIsDurable(): boolean {
 }
 
 export const EPHEMERAL_REASON =
-  "This deployment has no persistent disk, so the do-not-call list and attempt counts are " +
-  "lost whenever it restarts or sleeps. Live dialing is disabled here. Run the console " +
-  "locally, or on an instance with a mounted volume, to place real calls.";
+  "This is a demo environment: it does not keep records between restarts, so the do-not-call " +
+  "list cannot be relied on here. Live calling is switched off for that reason. Use the main " +
+  "console to place real calls.";

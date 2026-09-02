@@ -261,3 +261,63 @@ tr:hover .rowacts, tr:focus-within .rowacts { opacity: 1; }
 }
 .toast--bad { border-color: color-mix(in oklch, var(--stop) 55%, var(--line)); color: oklch(0.85 0.10 27); }
 @keyframes rise { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+/* ---------- operator override ---------- */
+
+.ovwrap { position: relative; }
+
+.ov-btn { white-space: nowrap; }
+.ov-btn--on {
+  border-color: color-mix(in oklch, var(--violet) 55%, var(--line));
+  color: var(--violet);
+  background: color-mix(in oklch, var(--violet) 12%, transparent);
+}
+
+.ovpanel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 40;
+  width: 330px;
+  padding: var(--space-md);
+  display: grid;
+  gap: var(--space-2xs);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 50px -18px oklch(0 0 0 / 0.85);
+  animation: drop 180ms var(--ease);
+}
+@keyframes drop { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: none; } }
+
+.ovdur { display: flex; gap: 4px; margin-top: 5px; }
+.ovdur .btn { flex: 1; justify-content: center; }
+
+.ovcheck { display: flex; gap: 9px; align-items: flex-start; padding: 7px 0; }
+.ovcheck input { margin-top: 3px; accent-color: var(--violet); }
+.ovcheck span { display: grid; gap: 1px; }
+.ovcheck strong { font-size: 0.8125rem; font-weight: 500; }
+.ovcheck small { font-size: 0.7rem; color: var(--text-3); line-height: 1.4; }
+
+.ovnote {
+  margin-top: var(--space-xs);
+  font-size: 0.7rem;
+  line-height: 1.5;
+  color: var(--text-3);
+}
+.ovnote--hard { color: oklch(0.78 0.10 27); }
+
+.ovactions { display: flex; justify-content: flex-end; gap: var(--space-xs); margin-top: var(--space-sm); }
+
+.ovbanner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 9px var(--space-lg);
+  background: color-mix(in oklch, var(--violet) 10%, var(--ink));
+  border-bottom: 1px solid color-mix(in oklch, var(--violet) 35%, var(--line-soft));
+  font-size: 0.78rem;
+  color: var(--text-2);
+}
+.ovbanner strong { color: var(--violet); font-weight: 600; }
+.ovbanner .btn { margin-left: auto; }

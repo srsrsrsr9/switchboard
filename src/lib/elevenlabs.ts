@@ -11,7 +11,7 @@ export class ElevenLabsError extends Error {
 
 function apiKey(): string {
   const k = process.env.ELEVENLABS_API_KEY;
-  if (!k) throw new ElevenLabsError("ELEVENLABS_API_KEY is not set in .env.local", 0, null);
+  if (!k) throw new ElevenLabsError("The voice service is not configured on this server.", 0, null);
   return k;
 }
 
@@ -46,7 +46,7 @@ function describeError(status: number, body: unknown): string {
     const first = detail[0] as { msg?: string; loc?: string[] };
     return `${(first.loc || []).join(".")}: ${first.msg ?? "invalid"}`;
   }
-  return `ElevenLabs returned HTTP ${status}`;
+  return `The voice service returned an error (HTTP ${status}).`;
 }
 
 export async function whoami(): Promise<{ tier: string }> {
@@ -61,7 +61,7 @@ export async function listVoices(): Promise<VoiceSummary[]> {
     headers: { "xi-api-key": apiKey() },
     cache: "no-store",
   });
-  if (!res.ok) throw new ElevenLabsError(`Could not list voices (HTTP ${res.status})`, res.status, null);
+  if (!res.ok) throw new ElevenLabsError(`Could not load the voice list (HTTP ${res.status}).`, res.status, null);
   const body = (await res.json()) as { voices?: VoiceSummary[] };
   return body.voices ?? [];
 }

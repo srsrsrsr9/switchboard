@@ -19,6 +19,7 @@ const DEFAULT_SETTINGS: Settings = {
   weekendCalling: false,
   requireConsent: true,
   dryRun: process.env.DRY_RUN !== "0",
+  override: null,
   business: {
     name: "Meridian Tax Resolution",
     agentName: "Avery",

@@ -1,5 +1,5 @@
 import { getStore } from "@/lib/store";
-import { canCallNow, contactLocalTime } from "@/lib/compliance";
+import { activeOverride, canCallNow, contactLocalTime } from "@/lib/compliance";
 import { resumeIfRunning } from "@/lib/dialer";
 import { ok } from "@/lib/api";
 import { authMode } from "@/lib/auth";
@@ -27,6 +27,10 @@ export async function GET(req: Request) {
     campaign: s.campaign,
     counts,
     signedIn: authMode(new URL(req.url).host) === "password",
+    override: (() => {
+      const o = activeOverride(s.settings, now.getTime());
+      return o ? { ...o, remainingMs: o.until - now.getTime() } : null;
+    })(),
     durableStorage: storageIsDurable(),
     ephemeralReason: storageIsDurable() ? null : EPHEMERAL_REASON,
     configured: {

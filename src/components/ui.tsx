@@ -11,6 +11,9 @@ export type StatePayload = {
   counts: Record<string, number>;
   signedIn: boolean;
   durableStorage: boolean;
+  override:
+    | (import("@/lib/types").Override & { remainingMs: number })
+    | null;
   ephemeralReason: string | null;
   configured: { apiKey: boolean; agent: boolean; phone: boolean };
 };
