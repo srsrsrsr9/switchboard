@@ -8,7 +8,7 @@ const OUTCOME_TONE: Record<string, "good" | "bad" | "held" | "off"> = {
   "no answer": "off", declined: "off",
 };
 
-export function Lines({ calls, dryRun }: { calls: Call[]; dryRun: boolean }) {
+export function Lines({ calls }: { calls: Call[] }) {
   const active = calls.filter((c) => c.status === "dialing" || c.status === "in_progress" || c.status === "processing");
   const past = calls.filter((c) => !active.includes(c));
 
@@ -21,7 +21,6 @@ export function Lines({ calls, dryRun }: { calls: Call[]; dryRun: boolean }) {
             {active.length} up
           </span>
         </div>
-        {dryRun && <span className="tag">simulated</span>}
       </div>
 
       <div className="lines__scroll">
@@ -73,7 +72,6 @@ function CallCard({ call, defaultOpen = false }: { call: Call; defaultOpen?: boo
             {live
               ? call.status === "dialing" ? "dialing…" : "connected"
               : `${call.outcome ?? call.status} · ${relative(call.endedAt ?? call.startedAt)}`}
-            {call.simulated && " · sim"}
           </span>
         </span>
         <span className="callcard__timer">{clock(elapsed)}</span>

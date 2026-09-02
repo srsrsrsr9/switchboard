@@ -45,7 +45,6 @@ export function Appointments({ calls, contacts }: { calls: Call[]; contacts: Con
                 <span className="mono" style={{ fontSize: "0.7rem", color: "var(--text-3)" }}>
                   {relative(c.endedAt)}
                 </span>
-                {c.simulated && <span className="tag">simulated</span>}
               </div>
             </div>
           );
@@ -57,14 +56,14 @@ export function Appointments({ calls, contacts }: { calls: Call[]; contacts: Con
 
 function exportCsv(calls: Call[], contacts: ContactRow[]) {
   const esc = (v: string) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-  const header = ["name", "phone", "email", "company", "appointment", "notes", "booked_at", "simulated"];
+  const header = ["name", "phone", "email", "company", "appointment", "notes", "booked_at", "live_call"];
   const lines = [header.join(",")];
   for (const c of calls) {
     const contact = contacts.find((x) => x.id === c.contactId);
     lines.push([
       esc(c.contactName), esc(c.phone), esc(c.appointment?.email ?? ""), esc(contact?.company ?? ""),
       esc(c.appointment?.when ?? ""), esc(c.appointment?.notes ?? ""),
-      esc(c.endedAt ? new Date(c.endedAt).toISOString() : ""), esc(c.simulated ? "yes" : "no"),
+      esc(c.endedAt ? new Date(c.endedAt).toISOString() : ""), esc(c.simulated ? "no" : "yes"),
     ].join(","));
   }
   const blob = new Blob([lines.join("\n")], { type: "text/csv" });

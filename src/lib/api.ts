@@ -11,11 +11,15 @@ export function bad(message: string, status = 400) {
  */
 export function scrub(message: string): string {
   return message
+    // Drop URLs first: rewriting a vendor name inside one produces nonsense
+    // like "https://www.the phone line.com/docs/errors/20003".
+    .replace(/https?:\/\/\S+/g, "")
     .replace(/\bELEVENLABS_[A-Z_]+\b/g, "the voice service credentials")
     .replace(/\bTWILIO_[A-Z_]+\b/g, "the phone line settings")
     .replace(/\belevenlabs?\b/gi, "the voice service")
     .replace(/\btwilio\b/gi, "the phone line")
     .replace(/\.env\.local\b/g, "the server settings")
+    .replace(/\s{2,}/g, " ")
     .trim();
 }
 

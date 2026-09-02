@@ -53,6 +53,15 @@ export async function POST(req: Request) {
       if (!number) return bad("No outbound number is configured on this server.");
       if (!token) return bad("Paste your access token to connect the number.");
 
+      // Diagnostic only: shape, never the value. A Twilio auth token is 32 hex
+      // characters, so a mismatch here means the field is not receiving what the
+      // operator thinks they pasted (autofill, truncation, wrong panel).
+      console.warn(
+        `[setup] token received: length=${token.length} ` +
+        `looksLikeAuthToken=${/^[0-9a-f]{32}$/.test(token)} ` +
+        `startsWith=${token.slice(0, 2)} endsWith=${token.slice(-2)}`,
+      );
+
       const existing = await el.listPhoneNumbers();
       const already = existing.find((p) => p.phone_number === number);
       if (already) {

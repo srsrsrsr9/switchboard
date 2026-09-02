@@ -82,9 +82,24 @@ function agentBody(s: Settings, voiceId: string) {
           dynamic_variable_placeholders: { contact_name: "there", company: "" },
         },
       },
-      tts: { voice_id: voiceId, model_id: "eleven_flash_v2", stability: 0.45, speed: 0.98 },
-      turn: { turn_timeout: 8, silence_end_call_timeout: 20 },
-      conversation: { max_duration_seconds: 300 },
+      tts: {
+        voice_id: voiceId,
+        // turbo reads with more expression than flash; the extra latency is
+        // well under the pause a person leaves before answering anyway.
+        model_id: "eleven_turbo_v2",
+        // Lower stability lets the delivery move; too high and every sentence
+        // lands on the same note, which is the giveaway on a phone call.
+        stability: 0.35,
+        similarity_boost: 0.75,
+        speed: 1.02,
+        optimize_streaming_latency: 3,
+      },
+      turn: {
+        // Short, so it comes back quickly rather than leaving dead air.
+        turn_timeout: 6,
+        silence_end_call_timeout: 20,
+      },
+      conversation: { max_duration_seconds: 240 },
     },
     platform_settings: {
       data_collection: DATA_COLLECTION,

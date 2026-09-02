@@ -113,9 +113,13 @@ export function Console() {
           <OverrideControl live={state.override} onChanged={refresh} notify={notify} />
           <span
             className={settings.dryRun ? "mode mode--sim" : "mode mode--live"}
-            title={state.ephemeralReason ?? undefined}
+            title={
+              settings.dryRun
+                ? state.ephemeralReason ?? "Calls are rehearsed, not dialled."
+                : "Calls are placed for real."
+            }
           >
-            {state.ephemeralReason ? "Simulation only" : settings.dryRun ? "Simulation" : "Live dialing"}
+            {settings.dryRun ? "Rehearsal" : "Live"}
           </span>
           {state.signedIn && (
             <button
@@ -167,7 +171,7 @@ export function Console() {
         </div>
 
         <div className="column column--right">
-          <Lines calls={calls} dryRun={settings.dryRun} />
+          <Lines calls={calls} />
         </div>
       </div>
 

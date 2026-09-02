@@ -78,8 +78,8 @@ export function Setup({ settings, onChanged, notify, ephemeralReason }: {
           <div className="notice notice--warn">
             <strong>This workspace is on a free voice plan</strong>
             <span>
-              Everything here works and rehearses normally, but placing a real call may be refused until
-              the plan is upgraded.
+              Everything here works normally, but placing a real call may be refused until the plan is
+              upgraded.
             </span>
           </div>
         )}
@@ -240,8 +240,8 @@ export function Setup({ settings, onChanged, notify, ephemeralReason }: {
                 <small>
                   {ephemeralReason ?? (
                     <>
-                      Off means every call is simulated end to end — the queue, transcripts, and outcomes
-                      all behave normally, nothing dials. Turn it on only when you mean it.
+                      Off means the queue, transcripts, and outcomes all behave normally but nothing is
+                      dialled — useful for rehearsing. Turn it on to place real calls.
                     </>
                   )}
                 </small>
