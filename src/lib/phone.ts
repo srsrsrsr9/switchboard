@@ -26,10 +26,52 @@ put("America/Los_Angeles", `
 put("America/Anchorage", `907`);
 put("Pacific/Honolulu", `808`);
 
+/**
+ * Country calling code -> a representative timezone. Countries spanning several
+ * zones get their most populous one, which is close enough to keep a call inside
+ * daytime hours. NANP (+1) is handled by area code above and is not listed here.
+ */
+const COUNTRY_TZ: Record<string, string> = {
+  "20": "Africa/Cairo",        "27": "Africa/Johannesburg", "30": "Europe/Athens",
+  "31": "Europe/Amsterdam",    "32": "Europe/Brussels",     "33": "Europe/Paris",
+  "34": "Europe/Madrid",       "36": "Europe/Budapest",     "39": "Europe/Rome",
+  "40": "Europe/Bucharest",    "41": "Europe/Zurich",       "43": "Europe/Vienna",
+  "44": "Europe/London",       "45": "Europe/Copenhagen",   "46": "Europe/Stockholm",
+  "47": "Europe/Oslo",         "48": "Europe/Warsaw",       "49": "Europe/Berlin",
+  "51": "America/Lima",        "52": "America/Mexico_City", "54": "America/Argentina/Buenos_Aires",
+  "55": "America/Sao_Paulo",   "56": "America/Santiago",    "57": "America/Bogota",
+  "60": "Asia/Kuala_Lumpur",   "61": "Australia/Sydney",    "62": "Asia/Jakarta",
+  "63": "Asia/Manila",         "64": "Pacific/Auckland",    "65": "Asia/Singapore",
+  "66": "Asia/Bangkok",        "7":  "Europe/Moscow",       "81": "Asia/Tokyo",
+  "82": "Asia/Seoul",          "84": "Asia/Ho_Chi_Minh",    "86": "Asia/Shanghai",
+  "90": "Europe/Istanbul",     "91": "Asia/Kolkata",        "92": "Asia/Karachi",
+  "94": "Asia/Colombo",        "98": "Asia/Tehran",
+  "212": "Africa/Casablanca",  "234": "Africa/Lagos",       "254": "Africa/Nairobi",
+  "351": "Europe/Lisbon",      "352": "Europe/Luxembourg",  "353": "Europe/Dublin",
+  "358": "Europe/Helsinki",    "370": "Europe/Vilnius",     "380": "Europe/Kyiv",
+  "420": "Europe/Prague",      "421": "Europe/Bratislava",  "852": "Asia/Hong_Kong",
+  "855": "Asia/Phnom_Penh",    "880": "Asia/Dhaka",         "886": "Asia/Taipei",
+  "960": "Indian/Maldives",    "961": "Asia/Beirut",        "962": "Asia/Amman",
+  "965": "Asia/Kuwait",        "966": "Asia/Riyadh",        "968": "Asia/Muscat",
+  "971": "Asia/Dubai",         "972": "Asia/Jerusalem",     "974": "Asia/Qatar",
+  "977": "Asia/Kathmandu",
+};
+
+/**
+ * The timezone the calling window is judged against. Getting this wrong means
+ * calling someone at the wrong hour of their day, so an unrecognised country
+ * code resolves to UTC rather than silently borrowing a US zone.
+ */
 export function timezoneForPhone(e164: string): string {
-  const m = /^\+1(\d{3})/.exec(e164);
-  if (m && AREA_TZ[m[1]]) return AREA_TZ[m[1]];
-  return "America/New_York";
+  const nanp = /^\+1(\d{3})/.exec(e164);
+  if (nanp) return AREA_TZ[nanp[1]] ?? "America/New_York";
+
+  const digits = e164.replace(/^\+/, "");
+  for (const len of [3, 2, 1]) {
+    const tz = COUNTRY_TZ[digits.slice(0, len)];
+    if (tz) return tz;
+  }
+  return "UTC";
 }
 
 export type ParsedPhone = { ok: true; e164: string } | { ok: false; reason: string };
