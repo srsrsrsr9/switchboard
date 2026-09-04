@@ -20,6 +20,16 @@ const TICK_MS = 2500;
  */
 const MAX_CALL_MS = 6 * 60_000;
 
+/**
+ * How long a call may sit unanswered before it is treated as a no-answer.
+ *
+ * outboundCall asks for ringing_timeout_secs: 35, so a conversation still at
+ * "initiated" well past that was never picked up. Waiting for MAX_CALL_MS to
+ * catch it would hold one of the maxConcurrent slots for six minutes on a call
+ * nobody answered, which on a two-line console is most of the capacity.
+ */
+const RINGING_MS = 90_000;
+
 type G = typeof globalThis & { __callerDialer?: { timer: NodeJS.Timeout | null; ticking: boolean } };
 const g = globalThis as G;
 const engine = (g.__callerDialer ||= { timer: null, ticking: false });
@@ -194,9 +204,33 @@ function stallCall(s: Store, call: Call, contact: Contact | undefined, error: st
   persist();
 }
 
+/**
+ * A call that rang out. Unlike a stall this is a real, understood result, so it
+ * follows the same path finish() uses for an unanswered call: retry while the
+ * attempt cap allows it, then settle on no_answer.
+ */
+function noAnswerCall(s: Store, call: Call, contact: Contact | undefined, reason: string) {
+  call.status = "done";
+  call.endedAt = Date.now();
+  call.outcome = "no answer";
+
+  if (contact) {
+    contact.status = contact.attempts >= s.settings.maxAttempts ? "no_answer" : "queued";
+    contact.lastOutcome = reason;
+    contact.nextAttemptAt = Date.now() + s.settings.retryDelayMins * 60_000;
+  }
+  persist();
+}
+
 async function refreshActiveCalls(s: Store) {
   for (const call of activeCalls(s)) {
     if (call.simulated) { advanceSimulation(s, call); continue; }
+
+    if (call.status === "dialing" && Date.now() - call.startedAt > RINGING_MS) {
+      noAnswerCall(s, call, s.contacts.find((c) => c.id === call.contactId),
+        "Rang out — nobody picked up.");
+      continue;
+    }
 
     if (Date.now() - call.startedAt > MAX_CALL_MS) {
       stallCall(s, call, s.contacts.find((c) => c.id === call.contactId),
@@ -225,7 +259,10 @@ function applyConversation(s: Store, call: Call, conv: el.ConversationDetail) {
   call.durationSecs = conv.metadata?.call_duration_secs;
 
   const status = conv.status ?? "";
-  if (status === "initiated") call.status = "in_progress";
+  // "initiated" means the far end is still ringing. Calling that in_progress
+  // renders it as "connected" in the console, which reads as a live call that
+  // has gone silent rather than a phone nobody has picked up yet.
+  if (status === "initiated") call.status = "dialing";
   else if (status === "in-progress") call.status = "in_progress";
   else if (status === "processing") call.status = "processing";
   else if (status === "done" || status === "failed") {
