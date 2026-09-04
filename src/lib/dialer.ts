@@ -1,6 +1,7 @@
 import { ensureStore, getStore, persist, newId, storeLoadError } from "./store";
 import { canCallNow } from "./compliance";
 import { storageIsDurable } from "./storage";
+import { canHangUp, hangUp } from "./twilio";
 import * as el from "./elevenlabs";
 import { openingLine } from "./script";
 import type { Call, Contact, ContactStatus, Store } from "./types";
@@ -68,10 +69,74 @@ export function startCampaign(): { ok: boolean; error?: string } {
   return { ok: true };
 }
 
-export function stopCampaign(): void {
+export type StopResult = { stopped: number; stillRinging: number };
+
+/**
+ * Stop placing calls, and take back the ones already on their way.
+ *
+ * Flipping the running flag only stops the next call from being dialled — a
+ * phone that is already ringing goes on ringing, which is not what anyone
+ * means by Stop. Anything that cannot be hung up from here is reported rather
+ * than quietly marked done, because the alternative is a console that claims a
+ * line is clear while it is still ringing someone.
+ */
+export async function stopCampaign(): Promise<StopResult> {
   const s = getStore();
   s.campaign.running = false;
   s.campaign.stoppedAt = Date.now();
+  persist();
+
+  let stopped = 0;
+  let stillRinging = 0;
+
+  for (const call of activeCalls(s)) {
+    const contact = s.contacts.find((c) => c.id === call.contactId);
+
+    if (call.simulated) {
+      note(call, "Campaign stopped — rehearsal call ended.");
+      stoppedCall(s, call, contact, "Stopped by the operator.");
+      stopped++;
+      continue;
+    }
+
+    if (!call.callSid || !canHangUp()) {
+      note(call, call.callSid
+        ? "Campaign stopped, but this deployment has no carrier credentials to hang up with — the phone may still be ringing."
+        : "Campaign stopped, but no call reference was recorded, so it could not be hung up — the phone may still be ringing.");
+      stillRinging++;
+      continue;
+    }
+
+    try {
+      await hangUp(call.callSid);
+      note(call, "Campaign stopped — hung up.");
+      stoppedCall(s, call, contact, "Stopped by the operator.");
+      stopped++;
+    } catch (err) {
+      note(call, `Campaign stopped, but the hangup failed: ${err instanceof Error ? err.message : String(err)}`);
+      stillRinging++;
+    }
+  }
+
+  persist();
+  return { stopped, stillRinging };
+}
+
+/**
+ * A call the operator called off. The attempt still counts — the phone did
+ * ring — but nothing is held against the contact, so it is dialable again the
+ * moment the campaign restarts.
+ */
+function stoppedCall(s: Store, call: Call, contact: Contact | undefined, reason: string) {
+  call.status = "done";
+  call.endedAt = Date.now();
+  call.outcome = "stopped";
+
+  if (contact) {
+    contact.status = contact.attempts >= s.settings.maxAttempts ? "no_answer" : "queued";
+    contact.lastOutcome = reason;
+    contact.nextAttemptAt = undefined;
+  }
   persist();
 }
 

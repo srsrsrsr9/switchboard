@@ -12,7 +12,10 @@ export async function POST(req: Request) {
       const r = startCampaign();
       return r.ok ? ok({ running: true }) : bad(r.error ?? "Could not start.");
     }
-    if (action === "stop") { stopCampaign(); return ok({ running: false }); }
+    if (action === "stop") {
+      const r = await stopCampaign();
+      return ok({ running: false, ...r });
+    }
     return bad("Unknown action.");
   } catch (err) {
     return bad(errorMessage(err), 500);

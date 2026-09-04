@@ -8,7 +8,7 @@ const stamp = (at: number) =>
 
 const OUTCOME_TONE: Record<string, "good" | "bad" | "held" | "off"> = {
   booked: "good", "opted out": "bad", failed: "bad", callback: "held",
-  "no answer": "off", declined: "off",
+  "no answer": "off", declined: "off", stopped: "held",
 };
 
 export function Lines({ calls }: { calls: Call[] }) {

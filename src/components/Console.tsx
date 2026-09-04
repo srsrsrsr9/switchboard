@@ -52,8 +52,20 @@ export function Console() {
     setPending(true);
     try {
       const action = state.campaign.running ? "stop" : "start";
-      await api("/api/campaign", { method: "POST", body: JSON.stringify({ action }) });
-      notify(action === "start" ? "Campaign running" : "Campaign stopped");
+      const r = await api<{ stillRinging?: number }>("/api/campaign", {
+        method: "POST",
+        body: JSON.stringify({ action }),
+      });
+      if (action === "start") notify("Campaign running");
+      // Say so plainly when Stop could not reach a line: the operator needs to
+      // know a phone is still ringing, not be told everything stopped.
+      else if (r.stillRinging) {
+        notify(
+          `Campaign stopped, but ${r.stillRinging} ${r.stillRinging === 1 ? "call is" : "calls are"} ` +
+          `still up and could not be hung up from here.`,
+          true,
+        );
+      } else notify("Campaign stopped");
       await refresh();
     } catch (err) {
       notify(err instanceof Error ? err.message : String(err), true);
