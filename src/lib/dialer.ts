@@ -7,6 +7,19 @@ import type { Call, Contact, ContactStatus, Store } from "./types";
 
 const TICK_MS = 2500;
 
+/**
+ * Hard ceiling on a live call, measured from the moment it was placed.
+ *
+ * A call is normally closed out when the voice service reports "done" or
+ * "failed". When a conversation is created but the carrier never bridges it,
+ * that status can sit at "initiated" indefinitely — and since an active call
+ * holds one of the maxConcurrent slots, two of them are enough to wedge the
+ * dialer with no outward sign beyond an idle console. The cap sits above the
+ * agent's own max_duration_seconds (240) plus ringing (35) and post-call
+ * processing, so it only ever fires on a call that is genuinely stuck.
+ */
+const MAX_CALL_MS = 6 * 60_000;
+
 type G = typeof globalThis & { __callerDialer?: { timer: NodeJS.Timeout | null; ticking: boolean } };
 const g = globalThis as G;
 const engine = (g.__callerDialer ||= { timer: null, ticking: false });
@@ -149,9 +162,41 @@ function failCall(call: Call, contact: Contact, error: string) {
   persist();
 }
 
+/**
+ * A call abandoned by MAX_CALL_MS rather than by a result from the voice service.
+ *
+ * The call record is still a failure — nothing was collected — but the contact
+ * goes back in the queue, because a stall says nothing about whether the person
+ * wants to be reached. placeCall already counted the attempt, so the cap still
+ * bounds this; once it is reached the contact lands on failed for good.
+ *
+ * The retry waits out the usual retryDelayMins rather than going straight back
+ * on the line: we gave up without a terminal status, so the far end may still
+ * be ringing, and an immediate redial risks calling the same person twice.
+ */
+function stallCall(s: Store, call: Call, contact: Contact, error: string) {
+  call.status = "failed";
+  call.error = error;
+  call.endedAt = Date.now();
+  call.outcome = "failed";
+
+  const exhausted = contact.attempts >= s.settings.maxAttempts;
+  contact.status = exhausted ? "failed" : "queued";
+  contact.lastOutcome = error;
+  if (!exhausted) contact.nextAttemptAt = Date.now() + s.settings.retryDelayMins * 60_000;
+  persist();
+}
+
 async function refreshActiveCalls(s: Store) {
   for (const call of activeCalls(s)) {
     if (call.simulated) { advanceSimulation(s, call); continue; }
+
+    if (Date.now() - call.startedAt > MAX_CALL_MS) {
+      const contact = s.contacts.find((c) => c.id === call.contactId);
+      if (contact) stallCall(s, call, contact, "No result after 6 minutes — the line was closed out.");
+      continue;
+    }
+
     if (!call.conversationId) continue;
     try {
       const conv = await el.getConversation(call.conversationId);
