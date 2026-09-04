@@ -133,7 +133,11 @@ export function Roster({ contacts, requireConsent, onChanged, notify }: Props) {
                     <td className="attempt">{c.attempts || "—"}</td>
                     <td>
                       <div className="rowacts">
-                        {!c.dnc && (
+                        {c.dnc ? (
+                          <button className="btn btn--ghost btn--sm" onClick={() => patch(c.id, { dnc: false })} title="Clear the do-not-call flag and requeue">
+                            Allow
+                          </button>
+                        ) : (
                           <button className="btn btn--ghost btn--sm" onClick={() => patch(c.id, { dnc: true })} title="Add to do-not-call">
                             Suppress
                           </button>
