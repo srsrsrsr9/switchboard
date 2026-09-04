@@ -152,13 +152,18 @@ async function placeCall(s: Store, contact: Contact) {
   persist();
 }
 
-function failCall(call: Call, contact: Contact, error: string) {
+function failCall(call: Call, contact: Contact | undefined, error: string) {
   call.status = "failed";
   call.error = error;
   call.endedAt = Date.now();
   call.outcome = "failed";
-  contact.status = "failed";
-  contact.lastOutcome = error;
+  // The contact may have been removed from the roster while this call was in
+  // flight. Closing the call still has to happen: it is the call record, not
+  // the contact, that holds one of the maxConcurrent slots.
+  if (contact) {
+    contact.status = "failed";
+    contact.lastOutcome = error;
+  }
   persist();
 }
 
@@ -174,16 +179,18 @@ function failCall(call: Call, contact: Contact, error: string) {
  * on the line: we gave up without a terminal status, so the far end may still
  * be ringing, and an immediate redial risks calling the same person twice.
  */
-function stallCall(s: Store, call: Call, contact: Contact, error: string) {
+function stallCall(s: Store, call: Call, contact: Contact | undefined, error: string) {
   call.status = "failed";
   call.error = error;
   call.endedAt = Date.now();
   call.outcome = "failed";
 
-  const exhausted = contact.attempts >= s.settings.maxAttempts;
-  contact.status = exhausted ? "failed" : "queued";
-  contact.lastOutcome = error;
-  if (!exhausted) contact.nextAttemptAt = Date.now() + s.settings.retryDelayMins * 60_000;
+  if (contact) {
+    const exhausted = contact.attempts >= s.settings.maxAttempts;
+    contact.status = exhausted ? "failed" : "queued";
+    contact.lastOutcome = error;
+    if (!exhausted) contact.nextAttemptAt = Date.now() + s.settings.retryDelayMins * 60_000;
+  }
   persist();
 }
 
@@ -192,8 +199,8 @@ async function refreshActiveCalls(s: Store) {
     if (call.simulated) { advanceSimulation(s, call); continue; }
 
     if (Date.now() - call.startedAt > MAX_CALL_MS) {
-      const contact = s.contacts.find((c) => c.id === call.contactId);
-      if (contact) stallCall(s, call, contact, "No result after 6 minutes — the line was closed out.");
+      stallCall(s, call, s.contacts.find((c) => c.id === call.contactId),
+        "No result after 6 minutes — the line was closed out.");
       continue;
     }
 
@@ -204,8 +211,8 @@ async function refreshActiveCalls(s: Store) {
     } catch (err) {
       // A conversation can 404 for a few seconds right after it is created.
       if (Date.now() - call.startedAt > 90_000) {
-        const contact = s.contacts.find((c) => c.id === call.contactId);
-        if (contact) failCall(call, contact, err instanceof Error ? err.message : String(err));
+        failCall(call, s.contacts.find((c) => c.id === call.contactId),
+          err instanceof Error ? err.message : String(err));
       }
     }
   }

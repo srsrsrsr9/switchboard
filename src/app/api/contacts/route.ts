@@ -64,6 +64,10 @@ export async function DELETE(req: Request) {
     const i = s.contacts.findIndex((x) => x.id === id);
     if (i === -1) return bad("No such contact.", 404);
     s.contacts.splice(i, 1);
+    // Drop this contact's calls too. An in-flight call left behind here holds a
+    // concurrency slot with no contact to resolve it against, which stalls the
+    // dialer; the clear-everything branch above already works this way.
+    s.calls = s.calls.filter((c) => c.contactId !== id);
     persist();
     return ok({ removed: id });
   } catch (err) {

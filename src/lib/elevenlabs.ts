@@ -24,6 +24,10 @@ async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
       ...(init.headers as Record<string, string> | undefined),
     },
     cache: "no-store",
+    // Without a deadline a hung request never settles, and because the dialer
+    // awaits these inside its tick the whole loop would stop advancing — no
+    // calls placed, no calls closed out, and no way back short of a restart.
+    signal: AbortSignal.timeout(15_000),
   });
   const text = await res.text();
   let body: unknown = text;
