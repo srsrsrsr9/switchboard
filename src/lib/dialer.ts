@@ -30,6 +30,27 @@ const MAX_CALL_MS = 6 * 60_000;
  */
 const RINGING_MS = 90_000;
 
+const MAX_EVENTS = 30;
+
+/**
+ * Record what the dialer just did, or was just told, on the call itself.
+ *
+ * Most of what goes wrong out here is invisible from the console: a call sits
+ * at 0:00 and there is no way to tell a phone still ringing from a conversation
+ * that stopped reporting. These lines are shown on the call card and repeated
+ * to stdout, so the same story is available in the host's logs.
+ *
+ * Ticks repeat every 2.5s, so an unchanged line is dropped rather than logged
+ * over and over.
+ */
+function note(call: Call, text: string) {
+  const events = (call.events ||= []);
+  if (events[events.length - 1]?.text === text) return;
+  events.push({ at: Date.now(), text });
+  if (events.length > MAX_EVENTS) events.splice(0, events.length - MAX_EVENTS);
+  console.log(`[dialer] ${call.phone} ${call.id} — ${text}`);
+}
+
 type G = typeof globalThis & { __callerDialer?: { timer: NodeJS.Timeout | null; ticking: boolean } };
 const g = globalThis as G;
 const engine = (g.__callerDialer ||= { timer: null, ticking: false });
@@ -136,7 +157,15 @@ async function placeCall(s: Store, contact: Contact) {
 
   // storageIsDurable is re-checked here rather than trusted from settings: this is
   // the last point before a real phone rings.
-  if (s.settings.dryRun || !storageIsDurable() || storeLoadError()) { simulate(call, contact); return; }
+  if (s.settings.dryRun || !storageIsDurable() || storeLoadError()) {
+    note(call, s.settings.dryRun
+      ? "Rehearsal mode — no real call placed."
+      : "Records are not durable right now, so this is a rehearsal, not a real call.");
+    simulate(call, contact);
+    return;
+  }
+
+  note(call, `Asking the voice service to dial ${contact.phone}.`);
 
   try {
     const res = await el.outboundCall({
@@ -150,14 +179,20 @@ async function placeCall(s: Store, contact: Contact) {
       firstMessage: openingLine(contact.name),
     });
     if (!res.success || !res.conversation_id) {
+      note(call, `Voice service refused the call: ${res.message || "no reason given"}`);
       failCall(call, contact, res.message || "The call could not be placed");
       return;
     }
     call.conversationId = res.conversation_id;
     call.callSid = res.callSid || undefined;
-    call.status = "in_progress";
+    // The line is open but nobody has answered yet; applyConversation moves this
+    // on once the voice service says the conversation is actually under way.
+    call.status = "dialing";
+    note(call, `Voice service accepted it (conversation ${res.conversation_id}). Ringing.`);
   } catch (err) {
-    failCall(call, contact, err instanceof Error ? err.message : String(err));
+    const msg = err instanceof Error ? err.message : String(err);
+    note(call, `Could not place the call: ${msg}`);
+    failCall(call, contact, msg);
   }
   persist();
 }
@@ -227,12 +262,15 @@ async function refreshActiveCalls(s: Store) {
     if (call.simulated) { advanceSimulation(s, call); continue; }
 
     if (call.status === "dialing" && Date.now() - call.startedAt > RINGING_MS) {
+      note(call, `Still ringing ${Math.round(RINGING_MS / 1000)}s after dialling — treating it as no answer.`);
       noAnswerCall(s, call, s.contacts.find((c) => c.id === call.contactId),
         "Rang out — nobody picked up.");
       continue;
     }
 
     if (Date.now() - call.startedAt > MAX_CALL_MS) {
+      note(call, `No terminal status after ${Math.round(MAX_CALL_MS / 60_000)} minutes` +
+        `${call.providerStatus ? ` (last reported "${call.providerStatus}")` : ""} — closing the line.`);
       stallCall(s, call, s.contacts.find((c) => c.id === call.contactId),
         "No result after 6 minutes — the line was closed out.");
       continue;
@@ -243,6 +281,7 @@ async function refreshActiveCalls(s: Store) {
       const conv = await el.getConversation(call.conversationId);
       applyConversation(s, call, conv);
     } catch (err) {
+      note(call, `Could not read the conversation: ${err instanceof Error ? err.message : String(err)}`);
       // A conversation can 404 for a few seconds right after it is created.
       if (Date.now() - call.startedAt > 90_000) {
         failCall(call, s.contacts.find((c) => c.id === call.contactId),
@@ -259,6 +298,15 @@ function applyConversation(s: Store, call: Call, conv: el.ConversationDetail) {
   call.durationSecs = conv.metadata?.call_duration_secs;
 
   const status = conv.status ?? "";
+  if (status && status !== call.providerStatus) {
+    call.providerStatus = status;
+    note(call, `Voice service reports "${status}".`);
+  }
+  const term = conv.metadata?.termination_reason;
+  if (term && term !== call.terminationReason) {
+    call.terminationReason = term;
+    note(call, `Voice service says the call ended: ${term}`);
+  }
   // "initiated" means the far end is still ringing. Calling that in_progress
   // renders it as "connected" in the console, which reads as a live call that
   // has gone silent rather than a phone nobody has picked up yet.
@@ -320,6 +368,8 @@ function finish(s: Store, call: Call, data: Record<string, unknown>, conv?: el.C
     contact.lastOutcome = str(data.summary) ?? "Not interested";
     call.outcome = "declined";
   }
+
+  note(call, `Outcome: ${call.outcome ?? "unknown"}${contact.lastOutcome ? ` — ${contact.lastOutcome}` : ""}`);
 
   const evals = conv?.analysis?.evaluation_criteria_results;
   if (evals) {

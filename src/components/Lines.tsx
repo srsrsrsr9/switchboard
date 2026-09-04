@@ -3,6 +3,9 @@ import { useEffect, useRef, useState } from "react";
 import type { Call } from "@/lib/types";
 import { clock, formatPhoneDisplay, Lamp, relative } from "./ui";
 
+const stamp = (at: number) =>
+  new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+
 const OUTCOME_TONE: Record<string, "good" | "bad" | "held" | "off"> = {
   booked: "good", "opted out": "bad", failed: "bad", callback: "held",
   "no answer": "off", declined: "off",
@@ -104,6 +107,18 @@ function CallCard({ call, defaultOpen = false }: { call: Call; defaultOpen?: boo
             ))}
             <div ref={scrollRef} />
           </div>
+
+          {call.events && call.events.length > 0 && (
+            <div className="calllog">
+              <span className="calllog__title">What happened</span>
+              {call.events.map((e, i) => (
+                <div className="calllog__line" key={i}>
+                  <span className="calllog__at">{stamp(e.at)}</span>
+                  <span>{e.text}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -23,6 +23,9 @@ export type Contact = {
 
 export type TranscriptTurn = { role: string; message: string; timeInCallSecs?: number };
 
+/** One line in a call's own log: what the dialer did, and what it was told. */
+export type CallEvent = { at: number; text: string };
+
 export type Call = {
   id: string;
   contactId: string;
@@ -40,6 +43,9 @@ export type Call = {
   appointment?: { when?: string; email?: string; notes?: string };
   error?: string;
   simulated?: boolean;
+  events?: CallEvent[];
+  providerStatus?: string;      // last raw status the voice service reported
+  terminationReason?: string;   // why the voice service says the call ended
 };
 
 /**
